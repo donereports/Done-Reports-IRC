@@ -1,7 +1,17 @@
 
-function ProjectStatus(zen) {
+function now() {
+  return parseInt( (new Date()).getTime() / 1000 );
+}
+
+function ProjectStatus(zen, redis) {
   var self = this;
   self.zen = zen;
+  self.redis = redis;
+}
+
+// Returns a key namespaced to this project for use in Redis
+ProjectStatus.prototype.rkey = function(key) {
+  return "projects-"+key;
 }
 
 ProjectStatus.prototype.ask_past = function(channel, username, nick) {
@@ -47,6 +57,43 @@ ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
   ];
 
   self.zen.send_privmsg(nick, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
+};
+
+ProjectStatus.prototype.spoke = function(channel, username, nick) {
+  var self = this;
+
+  // Add this nick to the list of people currently in the channel.
+  // Redundant with the "join" event, but could catch error cases.
+  self.redis.sadd(self.rkey(channel), username);
+
+  // Store the time they last spoke.
+  self.redis.hset(self.rkey(channel+"-"+username), "lastspoke", now(), function(){});
+};
+
+ProjectStatus.prototype.joined = function(channel, username, nick) {
+  var self = this;
+
+  // Add this nick to the list of people currently in the channel.
+  self.redis.sadd(self.rkey(channel), username);
+
+  // Store the time they joined the channel.
+  self.redis.hset(self.rkey(channel+"-"+username), "joined", now(), function(){});
+};
+
+ProjectStatus.prototype.parted = function(channel, username, nick) {
+  var self = this;
+
+  // Remove this nick from the list of people currently in the channel.
+  self.redis.srem(self.rkey(channel), username);
+
+  // Store the time they parted the channel.
+  self.redis.hset(self.rkey(channel+"-"+username), "parted", now(), function(){});
+};
+
+ProjectStatus.prototype.members = function(channel, callback) {
+  var self = this;
+
+  self.redis.smembers(self.rkey(channel), callback);
 };
 
 module.exports.ProjectStatus = ProjectStatus;

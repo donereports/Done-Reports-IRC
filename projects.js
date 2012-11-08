@@ -12,16 +12,7 @@ var zen = new api.ZenIRCBot(bot_config.redis.host,
 var sub = zen.get_redis_client();
 var redis = zen.get_redis_client();
 
-// Returns a key namespaced to this project for use in Redis
-function rkey(key) {
-  return "projects-"+key;
-}
-
-function now() {
-  return parseInt( (new Date()).getTime() / 1000 );
-}
-
-var projects = new projectStatus.ProjectStatus(zen);
+var projects = new projectStatus.ProjectStatus(zen, redis);
 
 sub.subscribe('in');
 sub.on('message', function(channel, message) {
@@ -35,20 +26,20 @@ sub.on('message', function(channel, message) {
     if(msg.type == "directed_privmsg") {
       console.log(msg);
 
+      projects.spoke(msg.data.channel, username, msg.data.sender);
+
+      if(done=msg.data.raw_message.match(/!done (.+)/)) {
+        console.log(username + " did something: " + done[1]);
+      }
 
     }
     if(msg.type == "privmsg") {
       console.log(msg);
 
-      // Add this nick to the list of people currently in the channel.
-      // Redundant with the "join" event below, but could catch error cases.
-      redis.sadd(rkey(msg.data.channel), username);
-
-      // Store the time they last spoke.
-      redis.hset(rkey(msg.data.channel+"-"+username), "lastspoke", now(), function(){});
+      projects.spoke(msg.data.channel, username, msg.data.sender);
 
       if(msg.data.message == "who") {
-        redis.smembers(rkey(msg.data.channel), function(err, reply){
+        projects.members(msg.data.channel, function(err, reply){
           zen.send_privmsg(msg.data.channel, JSON.stringify(reply));
 
         });
@@ -63,22 +54,12 @@ sub.on('message', function(channel, message) {
     if(msg.type == "join") {
       console.log(msg);
 
-      // Add this nick to the list of people currently in the channel.
-      redis.sadd(rkey(msg.data.channel), username);
-
-      // Store the time they joined the channel.
-      redis.hset(rkey(msg.data.channel+"-"+username), "joined", now(), function(){});
-
+      projects.joined(msg.data.channel, username, msg.data.sender);
     }
     if(msg.type == "part") {
       console.log(msg);
 
-      // Remove this nick from the list of people currently in the channel.
-      redis.srem(rkey(msg.data.channel), username);
-
-      // Store the time they parted the channel.
-      redis.hset(rkey(msg.data.channel+"-"+username), "parted", now(), function(){});
-
+      projects.parted(msg.data.channel, username, msg.data.sender);
     }
   }
 });
