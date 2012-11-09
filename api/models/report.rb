@@ -5,6 +5,7 @@ class Report
   belongs_to :group
 
   property :date_started, DateTime
+  property :date_reminder_sent, DateTime
   property :date_completed, DateTime
 
   property :created_at, DateTime
