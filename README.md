@@ -121,6 +121,82 @@ When posting a report, sends a message to #geoloqi-team.
 Anybody who was not in the channel at the time the report is posted will get the message the next time they join the channel as a private message.
 
 
+API
+===
+
+The server knows the current report that is being collected.
+
+`POST /api/report/new`
+
+* auth
+* username - The username sending the report
+* type - past, future, blocking, hero, unknown
+* message - The text of the report
+
+Post a new report. 
+
+`POST /api/report/compile`
+
+Compile all pending reports into a record, and send the report out.
+
+
+Data Model
+==========
+
+
+Accounts
+--------
+
+* id
+* name
+
+
+Groups
+------
+
+* id
+* account_id
+* token
+* name
+* email_recipient
+* due_day - every, sunday, monday, tuesday, etc
+* due_time - i.e. 5:00pm
+* due_timezone - America/Los_Angeles
+
+
+Reports
+-------
+
+* id
+* group_id
+* date_started
+* date_completed
+
+
+Items
+-----
+
+* id
+* report_id
+* user_id
+* date
+* type
+* message
+
+
+Users
+-----
+
+* account_id
+* username
+* email
+
+
+User-Groups
+-----------
+
+* user_id
+* group_id
 
 
 
