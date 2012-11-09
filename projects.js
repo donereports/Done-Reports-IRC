@@ -33,36 +33,67 @@ sub.on('message', function(channel, message) {
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
 
-      if(msg.data.raw_message.match(/^!done (.+)/)) {
-        console.log(username + " did something: " + msg.data.message);
+      var done = {
+        message: false,
+        type: false
+      };
+
+      if(match=msg.data.raw_message.match(/^!done (.+)/)) {
+        console.log(username + " did something: " + match[1]);
 
         // Record their reply
+        done.message = match[1];
+        done.type = "past";
 
+      } else if(match=msg.data.raw_message.match(/^!todo (.+)/)) {
+        console.log(username + " will do: " + match[1]);
 
-      } else if(msg.data.raw_message.match(/^zenloqi: (.+)/i)) {
-        console.log(username + " did something: " + msg.data.message);
+        // Record their reply
+        done.message = match[1];
+        done.type = "future";
+
+      } else if(match=msg.data.raw_message.match(/^!block(?:ing)? (.+)/)) {
+        console.log(username + " is blocked on: " + match[1]);
+
+        // Record their reply
+        done.message = match[1];
+        done.type = "blocking";
+
+      } else if(match=msg.data.raw_message.match(/^zenloqi: (.+)/i)) {
+        console.log(username + " did something: " + match[1]);
 
         // Check if we recently asked them a question, and if so, record a reply
         projects.get_lastasked("all", username, function(lastasked){
           if(lastasked) {
-            console.log(lastasked);
             var threshold = 60 * 10;
             if(now() - lastasked.past > threshold) {
               // Record a reply to "last"
-              
+              done.message = match[1];
+              done.type = "past";
+
             } else if(now() - lastasked.future > threshold) {
               // Record a reply to "future"
+              done.message = match[1];
+              done.type = "future";
 
             } else if(now() - lastasked.blocking > threshold) {
               // Record a reply to "blocking"
+              done.message = match[1];
+              done.type = "blocking";
 
             } else if(now() - lastasked.hero > threshold) {
               // Record a reply to "hero"
+              done.message = match[1];
+              done.type = "hero";
 
             }
           }
         });
+      }
 
+      if(done.message) {
+        // Send the message to the API
+        console.log(done);
       }
 
     }
