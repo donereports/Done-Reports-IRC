@@ -6,13 +6,53 @@
     "token": "12345678901234567890123456789012"
   },
   "users": [
-    {"username":"aaronpk", "token":"", "geoloqi_user_id":"Gf"},
-    {"username":"caseorganic", "token":"", "geoloqi_user_id":"2"},
-    {"username":"kenichi", "token":"", "geoloqi_user_id":"4ab"},
-    {"username":"kyledrake", "token":"", "geoloqi_user_id":"13K"},
-    {"username":"patrickarlt", "token":"", "geoloqi_user_id":"bo"},
-    {"username":"joshyaganeh", "token":"", "geoloqi_user_id":"Sx"},
-    {"username":"jerrysv", "token":"", "geoloqi_user_id":"den"},
-    {"username":"robinj", "token":"", "geoloqi_user_id":"DDC"}
+    {
+      "username":"aaronpk", 
+      "token":"", 
+      "geoloqi_user_id":"Gf",
+      "nicks": []
+    },
+    {
+      "username":"caseorganic", 
+      "token":"", 
+      "geoloqi_user_id":"2",
+      "nicks": ["case", "caseorgani", "caseorgan"]
+    },
+    {
+      "username":"kenichi", 
+      "token":"", 
+      "geoloqi_user_id":"4ab",
+      "nicks": []
+    },
+    {
+      "username":"kyledrake", 
+      "token":"", 
+      "geoloqi_user_id":"13K",
+      "nicks": ["kyle"]
+    },
+    {
+      "username":"patrickarlt", 
+      "token":"", 
+      "geoloqi_user_id":"bo",
+      "nicks": []
+    },
+    {
+      "username":"joshy", 
+      "token":"", 
+      "geoloqi_user_id":"Sx",
+      "nicks": ["josh"]
+    },
+    {
+      "username":"jerrysv", 
+      "token":"", 
+      "geoloqi_user_id":"den",
+      "nicks": []
+    },
+    {
+      "username":"robinj", 
+      "token":"", 
+      "geoloqi_user_id":"DDC",
+      "nicks": ["robin","robinjones"]
+    }
   ]
 }

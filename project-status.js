@@ -18,6 +18,30 @@ ProjectStatus.prototype.rkey = function(key) {
   return "projects-"+key;
 }
 
+
+// Given a nick, find the corresponding username by checking aliases defined in the config file
+ProjectStatus.prototype.username_from_nick = function(nick) {
+  var self = this;
+
+  nick = nick.replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
+
+  for(var i in self.config.users) {
+    var user = self.config.users[i];
+
+    if(user.username == nick) {
+      return nick;
+    }
+
+    for(var j in user.nicks) {
+      if(user.nicks[j] == nick)
+        return user.username;
+    }
+  }
+
+  return nick;
+}
+
+
 ProjectStatus.prototype.ask_past = function(channel, username, nick) {
   var self = this;
 
@@ -67,14 +91,15 @@ ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
   self.set_lastasked("hero", username);
 };
 
-ProjectStatus.prototype.send_confirmation = function(channel) {
+ProjectStatus.prototype.send_confirmation = function(nick, channel) {
   var self = this;
 
   var replies = [
-    "Thanks!",
-    "Got it!",
-    "Cheers!",
-    "Nice."
+    nick + ": Thanks!",
+    nick + ": Got it!",
+    nick + ": Cheers!",
+    nick + ": Nice.",
+    "Thanks, " + nick
   ];
 
   self.zen.send_privmsg(channel, replies[Math.floor(Math.random()*replies.length)]);

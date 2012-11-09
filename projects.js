@@ -26,7 +26,7 @@ sub.on('message', function(channel, message) {
   if(msg.version == 1) {
 
     // TODO: Normalize the nick (msg.data.sender) and map to a username
-    var username = msg.data.sender;
+    var username = projects.username_from_nick(msg.data.sender);
 
     if(msg.type == "directed_privmsg") {
       console.log(msg);
@@ -92,15 +92,21 @@ sub.on('message', function(channel, message) {
       }
 
       if(done.message) {
+        projects.set_lastreplied(done.type, username);
+
         // Send the message to the API
         console.log(done);
         projects.submit_report(username, done.type, done.message, function(response){
           console.log("Got a response!");
           console.log(response);
           if(response.entry) {
-            projects.send_confirmation(msg.data.channel);
+            projects.send_confirmation(msg.data.sender, msg.data.channel);
           } else {
-            zen.send_privmsg(msg.data.channel, "Something went wrong trying to store your report!");
+            if(response.error == "user_not_found") {
+              zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for " + response.error_username);
+            } else {
+              zen.send_privmsg(msg.data.channel, "Something went wrong trying to store your report!");
+            }
           }
         });
       }
@@ -111,16 +117,11 @@ sub.on('message', function(channel, message) {
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
 
-      if(msg.data.message == "who") {
+      if(msg.data.message == "who is in the channel right now?") {
         projects.members(msg.data.channel, function(err, reply){
           zen.send_privmsg(msg.data.channel, JSON.stringify(reply));
 
         });
-      }
-
-      if(msg.data.message == "ask_past") {
-        console.log("ask_past");
-        projects.ask_past(msg.data.channel, username, msg.data.sender);
       }
 
     }
@@ -189,22 +190,20 @@ cronFunc = function(){
         if(currentTime.getHours() >= 7 && currentTime.getHours() <= 17) {
 
           projects.get_lastasked("past", user.username, function(err, lastasked){
-            console.log("  Last asked " + user.username + " on " + lastasked);
+            projects.get_lastreplied("past", user.username, function(err, lastreplied){
+              console.log("  Last asked " + user.username + " on " + lastasked);
+              console.log("  Last got a reply from " + user.username + " on " + lastreplied);
 
-            if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
-
-              projects.get_lastreplied("past", user.username, function(err, lastreplied){
-                console.log("  Last got a reply from " + user.username + " on " + lastreplied);
-
-                if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 4) ) {
+              if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 4) ) {
+                if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
 
                   if( members.indexOf(user.username) != -1 ) {
                     console.log("  " + user.username + " is online!");
 
                     if( lastasked == null && lastreplied == null ) {
-                      // First time this user is in the system. Bail out 90% of the time
-                      // to stagger the first questions to everyone.
-                      if( Math.random() < 0.9 ) {
+                      // First time this user is in the system. Bail out some portion 
+                      // of the time to stagger the first questions to everyone.
+                      if( Math.random() < 0.4 ) {
                         return;
                       }
                     }
@@ -212,15 +211,13 @@ cronFunc = function(){
                     console.log("  asking " + user.username + " now!");
                     projects.get_nick(config.channel, user.username, function(err, current_nick){
                       projects.ask_past(config.channel, user.username, (current_nick ? current_nick : user.username));
-
                     });
 
                   }
 
                 }
-              });
-
-            }
+              }
+            });
           });
 
         }

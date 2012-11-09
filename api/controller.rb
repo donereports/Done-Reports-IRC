@@ -29,7 +29,7 @@ class Controller < Sinatra::Base
     user = User.first :account_id => group.account_id, :username => params[:username]
 
     if user.nil?
-      return json_error(200, {:error => 'user_not_found', :error_description => 'No user was found for the given username'})
+      return json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{params[:username]}\"", :error_username => params[:username]})
     end
 
     report = Report.current_report(group)
