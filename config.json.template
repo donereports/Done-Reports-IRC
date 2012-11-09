@@ -1,0 +1,18 @@
+{
+  "channel": "#zenloqi",
+  "submit_api": {
+    "host": "127.0.0.1",
+    "port": 80,
+    "token": "12345678901234567890123456789012"
+  },
+  "users": [
+    {"username":"aaronpk", "token":"", "geoloqi_user_id":"Gf"},
+    {"username":"caseorganic", "token":"", "geoloqi_user_id":"2"},
+    {"username":"kenichi", "token":"", "geoloqi_user_id":"4ab"},
+    {"username":"kyledrake", "token":"", "geoloqi_user_id":"13K"},
+    {"username":"patrickarlt", "token":"", "geoloqi_user_id":"bo"},
+    {"username":"joshyaganeh", "token":"", "geoloqi_user_id":"Sx"},
+    {"username":"jerrysv", "token":"", "geoloqi_user_id":"den"},
+    {"username":"robinj", "token":"", "geoloqi_user_id":"DDC"}
+  ]
+}

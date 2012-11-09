@@ -1,4 +1,6 @@
+var querystring = require('querystring');
 var https = require('https');
+var http = require('http');
 
 function now() {
   return parseInt( (new Date()).getTime() / 1000 );
@@ -65,6 +67,18 @@ ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
   self.set_lastasked("hero", username);
 };
 
+ProjectStatus.prototype.send_confirmation = function(channel) {
+  var self = this;
+
+  var replies = [
+    "Thanks!",
+    "Got it!",
+    "Cheers!",
+    "Nice."
+  ];
+
+  self.zen.send_privmsg(channel, replies[Math.floor(Math.random()*replies.length)]);
+}
 
 
 // Store the last time we asked each person each type of question
@@ -185,6 +199,48 @@ ProjectStatus.prototype.get_nick = function(channel, username, callback) {
   self.redis.hget(self.rkey(channel+"-"+username), "nick", callback);
 }
 
+
+ProjectStatus.prototype.submit_report = function(username, type, message, callback) {
+  var self = this;
+
+  var req = http.request({
+    host: self.config.submit_api.host,
+    port: self.config.submit_api.port,
+    path: "/api/report/new",
+    method: "POST",
+    headers: {
+      'Host': self.config.submit_api.host
+    }
+  }, function(channelRes) {
+    channelRes.setEncoding('utf8');
+    
+    if(channelRes.statusCode != 200) {
+      console.log('[api] ' + channelRes.statusCode);
+      response = '';
+      channelRes.on('data', function (chunk) {
+        response += chunk;
+      });
+      channelRes.on('end', function(){
+        console.log('[api] ERROR: ' + response);
+      });
+    } else {
+      response = '';
+      channelRes.on('data', function (chunk) {
+        response += chunk;
+      });
+      channelRes.on('end', function(){
+        callback(JSON.parse(response));          
+      });
+    }
+  });
+  req.write(querystring.stringify({
+    "token": self.config.submit_api.token,
+    "username": username,
+    "type": type,
+    "message": message
+  }));
+  req.end();
+}
 
 
 ProjectStatus.prototype.fetch_user_locations = function(callback) {

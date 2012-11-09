@@ -94,6 +94,15 @@ sub.on('message', function(channel, message) {
       if(done.message) {
         // Send the message to the API
         console.log(done);
+        projects.submit_report(username, done.type, done.message, function(response){
+          console.log("Got a response!");
+          console.log(response);
+          if(response.entry) {
+            projects.send_confirmation(msg.data.channel);
+          } else {
+            zen.send_privmsg(msg.data.channel, "Something went wrong trying to store your report!");
+          }
+        });
       }
 
     }
