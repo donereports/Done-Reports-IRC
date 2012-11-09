@@ -63,8 +63,7 @@ People may wish to give unsolicited reports even if the bot does not prompt them
 The syntax of this is not yet determined.
 
 * `Loqi: I did this.` Has the potential of false positives, also cannot associate with a question.
-* `!report I did this.` Is more explicit, will not get false positives, but may be harder to remember.
-* `!done I did this.` Is explicit, friendlier, still may be hard to remember.
+* `!done I did this.` Is explicit but somewhat hard to remember.
 
 
 Reply Format
