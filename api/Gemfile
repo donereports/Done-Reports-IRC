@@ -1,0 +1,13 @@
+source :rubygems
+
+gem 'sinatra',             :require => 'sinatra/base'
+gem 'erubis'
+gem 'rake',                     :require => nil
+gem 'hashie'
+gem 'json'
+gem 'mysql2',          '0.3.7'
+gem 'dm-core'
+gem 'dm-timestamps'
+gem 'dm-migrations'
+gem 'dm-mysql-adapter'
+
