@@ -33,11 +33,35 @@ sub.on('message', function(channel, message) {
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
 
-      if(done=msg.data.raw_message.match(/!done (.+)/)) {
-        console.log(username + " did something: " + done[1]);
-      } else {
-        // Check if we recently asked them a question, and if so, record a reply
+      if(msg.data.raw_message.match(/^!done (.+)/)) {
+        console.log(username + " did something: " + msg.data.message);
 
+        // Record their reply
+
+
+      } else if(msg.data.raw_message.match(/^zenloqi: (.+)/i)) {
+        console.log(username + " did something: " + msg.data.message);
+
+        // Check if we recently asked them a question, and if so, record a reply
+        projects.get_lastasked("all", username, function(lastasked){
+          if(lastasked) {
+            console.log(lastasked);
+            var threshold = 60 * 10;
+            if(now() - lastasked.past > threshold) {
+              // Record a reply to "last"
+              
+            } else if(now() - lastasked.future > threshold) {
+              // Record a reply to "future"
+
+            } else if(now() - lastasked.blocking > threshold) {
+              // Record a reply to "blocking"
+
+            } else if(now() - lastasked.hero > threshold) {
+              // Record a reply to "hero"
+
+            }
+          }
+        });
 
       }
 
@@ -130,7 +154,7 @@ cronFunc = function(){
             if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
 
               projects.get_lastreplied("past", user.username, function(err, lastreplied){
-                console.log("  Last got a reply from " + user.username + " on " + lastasked);
+                console.log("  Last got a reply from " + user.username + " on " + lastreplied);
 
                 if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 4) ) {
 

@@ -72,7 +72,20 @@ ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
 ProjectStatus.prototype.get_lastasked = function(type, username, callback) {
   var self = this;
 
-  self.redis.get(self.rkey("lastasked-"+type+"-"+username), callback);
+  if(type == "all") {
+    self.redis.mget([self.rkey("lastasked-past-"+username),self.rkey("lastasked-future-"+username),self.rkey("lastasked-blocking-"+username),self.rkey("lastasked-hero-"+username)], function(err,data){
+      if(data){
+        callback({
+          past: data[0],
+          future: data[1],
+          blocking: data[2],
+          hero: data[3]
+        });
+      }
+    });
+  } else {
+    self.redis.get(self.rkey("lastasked-"+type+"-"+username), callback);
+  }
 }
 
 ProjectStatus.prototype.set_lastasked = function(type, username) {
