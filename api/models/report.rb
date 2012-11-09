@@ -9,6 +9,10 @@ class Report
 
   property :created_at, DateTime
 
+  def create_entry(params)
+    return ReportEntry.create :report => self, :user => params[:user], :date => Time.now, :type => params[:type], :message => params[:message]
+  end
+
   # Returns the current open report for the given group.
   # If a report is open but past the deadline, the open report is returned.
   # This means we need to explicitly close reports before new ones are created.

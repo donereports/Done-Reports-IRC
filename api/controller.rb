@@ -34,7 +34,7 @@ class Controller < Sinatra::Base
 
     report = Report.current_report(group)
 
-    entry = ReportEntry.create :report => report, :user => user, :date => Time.now, :type => params[:type], :message => params[:message]
+    entry = report.create_entry :user => user, :type => params[:type], :message => params[:message]
 
     json_response 200, {
       :group => {
