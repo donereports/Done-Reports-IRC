@@ -16,6 +16,11 @@ end
 namespace :report do
   task :cron do
 
+    ses = AWS::SES::Base.new(
+      :access_key_id     => SiteConfig.aws_key_id,
+      :secret_access_key => SiteConfig.aws_secret
+    )
+
     # This is a cron task that runs every 5 minutes.
 
     # Send out any reminders for deadlines coming soon.
@@ -27,20 +32,28 @@ namespace :report do
       account.groups.each do |group|
 
         # Create the object that will be passed into the email erb template
-        email_data = {}
+        email_data = {
+          :group => nil,
+          :report => nil,
+          :report_localtime => nil,
+          :users => []
+        }
 
         puts "  Group '#{group.name}'"
-        email_data.group = group
+        email_data[:group] = group
 
         # Find an open report, if there are none, then this will create one
         report = Report.current_report(group)
         puts "    Report ##{report.id}"
-        email_data.report = report
+        email_data[:report] = report
+
+        zone = Timezone::Zone.new :zone => group.due_timezone
 
         # If the current time is past the due date, close the report and send an email summary
         if DateTime.now > report.date_due
           report.date_completed = DateTime.now
-          #report.save
+          email_data[:report_localtime] = report.date_completed.to_time.localtime(zone.utc_offset)
+          report.save
 
           # Each user gets their own section
           account.users.each do |user|
@@ -48,13 +61,14 @@ namespace :report do
             if report.entries.all(:user => user).count > 0
 
               puts "      #{user.username}"
+              num_entries = 0
 
               # Gather all the entries for this report, grouped by type
               types = [
-                {:type => 'past',     :title => 'What did you do?'},
-                {:type => 'future',   :title => 'What is your plan for tomorrow?'},
-                {:type => 'blocking', :title => 'What is blocking you?'},
-                {:type => 'hero',     :title => 'Who is your hero?'},
+                {:type => 'past',     :title => 'What did you do?', :entries => []},
+                {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
+                {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
+                {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
               ]
               types.each do |type|
                 entries = report.entries.all(:type => type[:type], :user => user)
@@ -62,15 +76,42 @@ namespace :report do
                   puts "        #{type[:title]}"
                   entries.each do |entry| 
                     puts "          * #{entry.message}"
+                    num_entries += 1
+                    type[:entries] << entry
                   end
                 end
+              end
+
+              if num_entries > 0
+                email_data[:users] << {
+                  :user => user,
+                  :types => types
+                }
               end
 
             end
           end
 
-          if email_data.num_entries > 0
-            email_html = :erb # TODO
+          if email_data[:users].count > 0
+
+            # Merge the data with the email template in email.erb
+            puts "------"
+            template = Erubis::Eruby.new File.read 'views/email.erb'
+            email_html = template.result email_data
+            puts email_html
+
+            template_text = Erubis::Eruby.new File.read 'views/email_text.erb'
+            email_text = template_text.result email_data
+            puts email_text
+            puts "------"
+
+            # Send the email via Amazon SES now
+            ses.send_email :to => group.email_recipient.split(","),
+              :source => 'done@geoloqi.com',
+              :subject => 'Report',
+              :text_body => email_text,
+              :html_body => email_html
+
           end
 
         # If the current time is past the reminder time, send out reminder emails

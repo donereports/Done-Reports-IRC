@@ -1,0 +1,13 @@
+Here's what <%= group.name %> has done recently.
+
+This report was sent on <%= report_localtime.strftime('%B %-d, %Y at %I:%M%P') %>.
+
+<% users.each do |user| %>
+<%= user[:user][:username] %>
+  <% user[:types].keep_if{|t| t[:entries].count > 0}.each do |type| %>
+  <%= type[:title] %>
+  <% type[:entries].each do |entry| %>
+   * <%= entry.message %>
+  <% end %>
+<% end %>
+<% end %>

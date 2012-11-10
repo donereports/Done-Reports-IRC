@@ -1,0 +1,23 @@
+<div style="background-color: #d6d6d6; padding: 30px 10px; text-align: center; font-size: 22pt;">
+  Here's what <span style="color: #e37b2f;"><%= group.name %></span> has done recently.
+</div>
+
+<div style="margin-top: 20px;">
+  This report was sent on <%= report_localtime.strftime('%B %-d, %Y at %I:%M%P') %>.
+</div>
+
+<% users.each do |user| %>  
+  <h3 style="font-size: 18pt; color: #e37b2f; font-weight: bold;"><%= user[:user][:username] %></h3>
+
+  <% user[:types].keep_if{|t| t[:entries].count > 0}.each do |type| %>
+    <div style="margin-left: 20px;">
+      <h4><%= type[:title] %></h4>
+      <ul>
+        <% type[:entries].each do |entry| %>
+          <li><%= entry.message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+<% end %>

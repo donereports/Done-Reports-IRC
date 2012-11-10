@@ -6,11 +6,11 @@ require 'bundler/setup'
 Bundler.require
 Dir.glob(['lib', 'models', 'helpers'].map! {|d| File.join File.expand_path(File.dirname(__FILE__)), d, '*.rb'}).each {|f| require f}
 
+SiteConfig = Hashie::Mash.new YAML.load_file('config.yml')[ENV['RACK_ENV']] if File.exists?('config.yml')
+
 class Controller < Sinatra::Base
   configure do
     set :root, File.dirname(__FILE__)
-
-    SiteConfig = Hashie::Mash.new YAML.load_file('config.yml')[ENV['RACK_ENV']] if File.exists?('config.yml')
 
     #DataMapper::Logger.new(STDOUT, :debug)
     DataMapper.finalize
