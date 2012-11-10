@@ -1,4 +1,4 @@
-class ReportEntry
+class Entry
   include DataMapper::Resource
   property :id, Serial
 

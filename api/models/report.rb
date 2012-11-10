@@ -4,6 +4,8 @@ class Report
 
   belongs_to :group
 
+  has n, :entries
+
   property :date_started, DateTime
   property :date_reminder_sent, DateTime
   property :date_completed, DateTime
@@ -14,7 +16,7 @@ class Report
   property :created_at, DateTime
 
   def create_entry(params)
-    return ReportEntry.create :report => self, :user => params[:user], :date => Time.now, :type => params[:type], :message => params[:message]
+    return Entry.create :report => self, :user => params[:user], :date => Time.now, :type => params[:type], :message => params[:message]
   end
 
   # Returns the current open report for the given group.
@@ -23,14 +25,14 @@ class Report
   # If no report is currently open, creates a new one.
   def self.current_report(group)
     report = Report.first(:group_id => group.id, :date_completed => nil, :order => [:date_started.desc])
-    if true || report.nil?
+    if report.nil?
       # Set the due date and reminder date based on the group settings
 
       # Get the last report
       last = Report.first(:group_id => group.id, :date_completed.not => nil, :order => [:date_started.desc])
-      puts last
 
       if group.due_day == "every"
+        puts "Creating a new report"
         zone = Timezone::Zone.new :zone => group.due_timezone
 
         now = Time.now # UTC

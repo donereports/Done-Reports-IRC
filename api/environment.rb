@@ -12,6 +12,7 @@ class Controller < Sinatra::Base
 
     SiteConfig = Hashie::Mash.new YAML.load_file('config.yml')[ENV['RACK_ENV']] if File.exists?('config.yml')
 
+    #DataMapper::Logger.new(STDOUT, :debug)
     DataMapper.finalize
     DataMapper.setup :default, SiteConfig.database_url
 

@@ -12,3 +12,90 @@ namespace :db do
     DataMapper.auto_upgrade!
   end
 end
+
+namespace :report do
+  task :cron do
+
+    # This is a cron task that runs every 5 minutes.
+
+    # Send out any reminders for deadlines coming soon.
+    # Send out emails for any reports that are open and past the deadline.
+
+    Account.all.each do |account|
+      puts "Processing account '#{account.name}'"
+
+      account.groups.each do |group|
+
+        # Create the object that will be passed into the email erb template
+        email_data = {}
+
+        puts "  Group '#{group.name}'"
+        email_data.group = group
+
+        # Find an open report, if there are none, then this will create one
+        report = Report.current_report(group)
+        puts "    Report ##{report.id}"
+        email_data.report = report
+
+        # If the current time is past the due date, close the report and send an email summary
+        if DateTime.now > report.date_due
+          report.date_completed = DateTime.now
+          #report.save
+
+          # Each user gets their own section
+          account.users.each do |user|
+            # Only include this user in the email if they have some entries
+            if report.entries.all(:user => user).count > 0
+
+              puts "      #{user.username}"
+
+              # Gather all the entries for this report, grouped by type
+              types = [
+                {:type => 'past',     :title => 'What did you do?'},
+                {:type => 'future',   :title => 'What is your plan for tomorrow?'},
+                {:type => 'blocking', :title => 'What is blocking you?'},
+                {:type => 'hero',     :title => 'Who is your hero?'},
+              ]
+              types.each do |type|
+                entries = report.entries.all(:type => type[:type], :user => user)
+                if entries.count > 0 
+                  puts "        #{type[:title]}"
+                  entries.each do |entry| 
+                    puts "          * #{entry.message}"
+                  end
+                end
+              end
+
+            end
+          end
+
+          if email_data.num_entries > 0
+            email_html = :erb # TODO
+          end
+
+        # If the current time is past the reminder time, send out reminder emails
+        elsif report.date_reminder != nil && DateTime.now > report.date_reminder
+          report.date_reminder_sent = DateTime.now
+          report.save
+
+
+
+        else
+          puts "      In progress"
+        end
+
+      end # end group
+    end # end account
+
+  end
+
+  task :test do
+    account = Account.first :id => 1
+    group = Group.first :id => 1
+
+    report = Report.current_report(group)
+
+    #puts report.inspect
+  end
+end
+

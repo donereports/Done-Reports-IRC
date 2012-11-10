@@ -3,6 +3,7 @@ class Account
   property :id, Serial
 
   has n, :groups
+  has n, :users
 
   property :name, String, :length => 128
 
