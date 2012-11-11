@@ -142,7 +142,7 @@ sub.on('message', function(channel, message) {
 
       projects.joined(msg.data.channel, username, msg.data.sender);
     }
-    if(msg.type == "part") {
+    if(msg.type == "part" || msg.type == "quit") {
       console.log(msg);
 
       projects.parted(msg.data.channel, username, msg.data.sender);
