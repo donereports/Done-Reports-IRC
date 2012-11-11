@@ -59,7 +59,7 @@ sub.on('message', function(channel, message) {
         done.message = match[1];
         done.type = "blocking";
 
-      } else if(match=msg.data.raw_message.match(/^zenloqi: (.+)/i)) {
+      } else if(match=msg.data.raw_message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 
         // Check if we recently asked them a question, and if so, record a reply
