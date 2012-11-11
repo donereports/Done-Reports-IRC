@@ -76,7 +76,7 @@ sub.on('message', function(channel, message) {
 
           if(lastasked) {
             var threshold = 60 * 30;
-            console.log(now() - parseInt(lastasked.past));
+
             if(lastasked.past && now() - parseInt(lastasked.past) < threshold) {
               // Record a reply to "last"
               done.message = match[1];
