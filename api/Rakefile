@@ -69,6 +69,7 @@ namespace :report do
                 {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
                 {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
                 {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
+                {:type => 'unknown',  :title => 'Other Updates', :entries => []},
               ]
               types.each do |type|
                 entries = report.entries.all(:type => type[:type], :user => user)
