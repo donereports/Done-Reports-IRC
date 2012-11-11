@@ -65,7 +65,7 @@ sub.on('message', function(channel, message) {
         // Check if we recently asked them a question, and if so, record a reply
         projects.get_lastasked("all", username, function(lastasked){
           if(lastasked) {
-            var threshold = 60 * 10;
+            var threshold = 60 * 30;
             if(now() - lastasked.past > threshold) {
               // Record a reply to "last"
               done.message = match[1];
@@ -194,7 +194,7 @@ cronFunc = function(){
               console.log("  Last asked " + user.username + " on " + lastasked);
               console.log("  Last got a reply from " + user.username + " on " + lastreplied);
 
-              if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 4) ) {
+              if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
                 if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
 
                   if( members.indexOf(user.username) != -1 ) {

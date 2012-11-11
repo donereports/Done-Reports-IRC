@@ -55,17 +55,6 @@ The only question that should be asked privately is the "Who is your hero?" ques
 The rest of the questions should be asked publicly, to facilitate more communication. By asking these questions publicly, everybody is kept more in the loop if they happen to see the question answered while on IRC, so there will be generally more transparency and information sharing. If someone sees someone else's "what is blocking you" answer, they may be able to help resolve the blocking issue sooner rather than later.
 
 
-Unsolicited Reports
--------------------
-
-People may wish to give unsolicited reports even if the bot does not prompt them, for example when they finish a task. The system should be able to accept unsoliited reports.
-
-The syntax of this is not yet determined.
-
-* `Loqi: I did this.` Has the potential of false positives, also cannot associate with a question.
-* `!done I did this.` Is explicit but somewhat hard to remember.
-
-
 Reply Format
 ------------
 
@@ -75,25 +64,52 @@ Replies should be addressed to the bot in this format:
 Loqi: wrote the "Accounts" method on the API
 ```
 
-If they don't respond in 30 minutes, ask the same question again with instructions.
+If they don't respond in 30 minutes, ask the same question again with instructions. (not yet implemented)
 
 ```
 aaronpk: What have you been working on? (reply like "Loqi: I did this stuff")
 ```
 
+
+Unsolicited Reports
+-------------------
+
+People may wish to give unsolicited reports even if the bot does not prompt them, for example when they finish a task. The system should be able to accept unsoliited reports.
+
+The syntax of this is as follows:
+
+* `!done I did this.`
+* `!todo I am going to do this tomorrow.`
+* `!blocking I'm blocked on this thing.`
+* `!hero Loqi is my hero because he makes my life easier.`
+
+
+
 Frequency
 ---------
 
-The big question is how often to ask these questions so as not to come off as annoying and pestering.
+The big question is how often to ask these questions so as not to come off as 
+annoying and pestering. The appropriate frequency has not yet been determined. 
 
+The following rules determine when Loqi will ask questions:
 
+* Loqi will only ask questions between 7am and 6pm in your local time. Local time is 
+determined by looking up your location in the Geoloqi API.
+* Loqi will only consider asking if you're in the channel
+* Loqi will not ask you more often than once every 3 hours.
+* After you reply, Loqi will not ask you again for at least 2 hours.
 
+These variables can be changed in the [cron function](https://github.com/geoloqi/Status-Reports/blob/master/projects.js#L182).
+
+I would like to add additional logic here to make Loqi ask questions at more 
+appropriate times. For example, when you commit some code, it would be appropriate
+to ask what the commit was about.
 
 
 Friendly Responses
 ------------------
 
-The bot should always reply in a friendly manner so people feel like they are talking with someone rather than filling out a report.
+Loqi should always reply in a friendly manner so people feel like they are talking with someone rather than filling out a report.
 
 * Thanks!
 * Got it!
@@ -106,13 +122,16 @@ The responses should never be cheesy or patronizing. An example of an inappropri
 Delivery
 ========
 
-After collecting peoples' responses, we need to publish a report with everyone's responses. The report should be posted to the private wiki, and a link delivered to IRC. This is to avoid the overhead of processing yet another email. 
+After collecting peoples' responses, we need to publish a report with everyone's responses.
 
+Reports are sent out every day at 6pm Portland time. 
 
-When to Deliver?
-----------------
+Future Enhancements
+-------------------
 
-* Send when 5/8 submit reports
+Post reports to the private wiki and send a link in IRC.
+
+* Send when 5/8 of people submit their reports
 * Reports will be sent no longer than 20 hours apart
 * Reports will be sent between 9am-5pm Pacific time
 
@@ -126,18 +145,14 @@ API
 
 The server knows the current report that is being collected.
 
-`POST /api/report/new`
+### `POST /api/report/new`
 
-* auth
+* token - The auth token for the group
 * username - The username sending the report
 * type - past, future, blocking, hero, unknown
 * message - The text of the report
 
-Post a new report. 
-
-`POST /api/report/compile`
-
-Compile all pending reports into a record, and send the report out.
+Post a new entry to the current open report. (This should be renamed to /api/entry/new)
 
 
 Data Model
@@ -190,13 +205,5 @@ Users
 * account_id
 * username
 * email
-
-
-User-Groups
------------
-
-* user_id
-* group_id
-
 
 

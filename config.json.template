@@ -1,7 +1,7 @@
 {
   "channel": "#zenloqi",
   "submit_api": {
-    "host": "127.0.0.1",
+    "host": "status-report.geoloqi.com",
     "port": 80,
     "token": "12345678901234567890123456789012"
   },
