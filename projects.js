@@ -59,56 +59,59 @@ sub.on('message', function(channel, message) {
         done.message = match[1];
         done.type = "blocking";
 
+      } else if(match=msg.data.raw_message.match(/^!hero (.+)/)) {
+        console.log(username + "'s hero: " + match[1]);
+
+        // Record their reply
+        done.message = match[1];
+        done.type = "hero";
+
       } else if(match=msg.data.raw_message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 
         // Check if we recently asked them a question, and if so, record a reply
         projects.get_lastasked("all", username, function(lastasked){
+          console.log("Last asked:");
+          console.log(lastasked);
+
           if(lastasked) {
             var threshold = 60 * 30;
-            if(now() - lastasked.past > threshold) {
+            console.log(now() - parseInt(lastasked.past));
+            if(lastasked.past && now() - parseInt(lastasked.past) < threshold) {
               // Record a reply to "last"
               done.message = match[1];
               done.type = "past";
 
-            } else if(now() - lastasked.future > threshold) {
+            } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
               // Record a reply to "future"
               done.message = match[1];
               done.type = "future";
 
-            } else if(now() - lastasked.blocking > threshold) {
+            } else if(lastasked.blocking && now() - parseInt(lastasked.blocking) < threshold) {
               // Record a reply to "blocking"
               done.message = match[1];
               done.type = "blocking";
 
-            } else if(now() - lastasked.hero > threshold) {
+            } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
               // Record a reply to "hero"
               done.message = match[1];
               done.type = "hero";
 
+            } else {
+              // done.message = match[1];
+              // done.type = "unknown";
+
             }
+          }
+
+          if(done.message) {
+            projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
           }
         });
       }
 
       if(done.message) {
-        projects.set_lastreplied(done.type, username);
-
-        // Send the message to the API
-        console.log(done);
-        projects.submit_report(username, done.type, done.message, function(response){
-          console.log("Got a response!");
-          console.log(response);
-          if(response.entry) {
-            projects.send_confirmation(msg.data.sender, msg.data.channel);
-          } else {
-            if(response.error == "user_not_found") {
-              zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for " + response.error_username);
-            } else {
-              zen.send_privmsg(msg.data.channel, "Something went wrong trying to store your report!");
-            }
-          }
-        });
+        projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
       }
 
     }
@@ -122,6 +125,10 @@ sub.on('message', function(channel, message) {
           zen.send_privmsg(msg.data.channel, JSON.stringify(reply));
 
         });
+      }
+
+      if(msg.data.message == "ask now") {
+        projects.ask_past(msg.data.channel, username, msg.data.sender);
       }
 
     }

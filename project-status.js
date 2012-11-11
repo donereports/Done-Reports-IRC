@@ -225,6 +225,29 @@ ProjectStatus.prototype.get_nick = function(channel, username, callback) {
 }
 
 
+ProjectStatus.prototype.record_response = function(username, type, message, nick, channel) {
+  var self = this;
+
+  console.log("Sending update...");
+
+  self.set_lastreplied(type, username);
+
+  // Send the message to the API
+  self.submit_report(username, type, message, function(response){
+    console.log("Got a response!");
+    console.log(response);
+    if(response.entry) {
+      self.send_confirmation(nick, channel);
+    } else {
+      if(response.error == "user_not_found") {
+        zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
+      } else {
+        zen.send_privmsg(channel, "Something went wrong trying to store your report!");
+      }
+    }
+  });
+}
+
 ProjectStatus.prototype.submit_report = function(username, type, message, callback) {
   var self = this;
 
