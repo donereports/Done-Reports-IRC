@@ -142,10 +142,15 @@ sub.on('message', function(channel, message) {
 
       projects.joined(msg.data.channel, username, msg.data.sender);
     }
-    if(msg.type == "part" || msg.type == "quit") {
+    if(msg.type == "part") {
       console.log(msg);
 
       projects.parted(msg.data.channel, username, msg.data.sender);
+    }
+    if(msg.type == "quit") {
+      console.log(msg);
+      // Quit messages don't include a channel
+      projects.parted(config.channel, username, msg.data.sender);
     }
   }
 });
