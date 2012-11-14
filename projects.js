@@ -199,7 +199,7 @@ cronFunc = function(){
         //  4) when they are at their computer (last time they spoke in IRC)
 
         // Only ask what you're working on during normal hours
-        if(currentTime.getHours() >= 7 && currentTime.getHours() <= 17) {
+        if(currentTime.getHours() >= 9 && currentTime.getHours() <= 17) {
 
           projects.get_lastasked("past", user.username, function(err, lastasked){
             projects.get_lastreplied("past", user.username, function(err, lastreplied){

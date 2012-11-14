@@ -23,7 +23,7 @@ ProjectStatus.prototype.rkey = function(key) {
 ProjectStatus.prototype.username_from_nick = function(nick) {
   var self = this;
 
-  nick = nick.replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
+  nick = nick.replace(/away$/, '').replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
 
   for(var i in self.config.users) {
     var user = self.config.users[i];
@@ -46,8 +46,8 @@ ProjectStatus.prototype.ask_past = function(channel, username, nick) {
   var self = this;
 
   var questions = [
-    "What have you been working on in the last hour or so?",
-    "What are you doing?",
+    "What have you been working on?",
+    "What project are you working on?",
     "What are you working on?",
   ];
 
