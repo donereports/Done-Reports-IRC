@@ -54,6 +54,35 @@ class Controller < Sinatra::Base
     }
   end
 
+  post '/hooks/github' do
+    payload = JSON.parse(params[:payload])
+
+    group = Group.first :github_token => params[:github_token]
+
+    if group.nil?
+      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    # Look for a matching project by the repo URL in the payload
+    repo = Repo.first_or_create(:link => payload["repository"]["url"], :group => group)
+    if repo
+      payload["commits"].each do |commit|
+        puts commit.inspect
+        # Attempt to map the commit to a user account. Will return nil if not found
+        user = User.first :account_id => group.account_id, :github_email => commit["author"]["email"]
+        Commit.create(
+          :repo => repo,
+          :link => commit["url"],
+          :text => commit["message"],
+          :date => Time.parse(commit["timestamp"]),
+          :user_name => commit["author"]["name"],
+          :user_email => commit["author"]["email"],
+          :user => user
+        )
+      end
+    end
+    json_response 200, {:result => 'ok'}
+  end
 
   def json_error(code, data)
     return [code, {

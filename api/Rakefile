@@ -83,6 +83,23 @@ namespace :report do
                 end
               end
 
+              # Find any repos this user committed to during the report period
+              repos = Repo.all(:commits => Commit.all(:user => user, 
+                :date.gt => report.date_started, 
+                :date.lt => report.date_completed))
+
+              if repos.count > 0
+                type = {
+                  :type => 'commits', :title => 'Active Projects', :entries => []
+                }
+                puts "        Commits"
+                repos.each do |r|
+                  puts "          * #{r.name}"
+                  type[:entries] << r
+                end
+                types << type
+              end
+
               if num_entries > 0
                 email_data[:users] << {
                   :user => user,

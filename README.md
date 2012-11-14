@@ -154,6 +154,15 @@ The server knows the current report that is being collected.
 
 Post a new entry to the current open report. (This should be renamed to /api/entry/new)
 
+### `POST /hooks/github`
+
+* ?github_token=xx - The internal Github auth token for the group
+* payload - The payload from Github
+
+Handle Github's post-commit hooks here.
+
+
+
 
 Data Model
 ==========
