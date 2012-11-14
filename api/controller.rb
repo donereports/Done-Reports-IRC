@@ -57,7 +57,12 @@ class Controller < Sinatra::Base
   post '/hooks/github' do
     payload = JSON.parse(params[:payload])
 
-    group = Group.first :github_token => params[:github_token]
+    if params[:github_token]
+      group = Group.first :github_token => params[:github_token]
+    else
+      # Hack because I forgot to set up the github hook with the token and need to write a script to clean it up later
+      group = Group.get 1
+    end
 
     if group.nil?
       return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
