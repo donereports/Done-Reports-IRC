@@ -120,6 +120,22 @@ sub.on('message', function(channel, message) {
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
 
+      if(match=msg.data.message.match(/^done! (.+)/)) {
+        var done = {
+          message: false,
+          type: false
+        };
+
+        console.log(username + " did something: " + match[1]);
+
+        // Record their reply
+        done.message = match[1];
+        done.type = "past";
+
+        projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
+      }
+
+
       if(msg.data.message == "who is in the channel right now?") {
         projects.members(msg.data.channel, function(err, reply){
           zen.send_privmsg(msg.data.channel, JSON.stringify(reply));
