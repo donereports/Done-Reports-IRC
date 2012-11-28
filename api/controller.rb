@@ -54,6 +54,49 @@ class Controller < Sinatra::Base
     }
   end
 
+
+=begin
+  `POST /api/report/remove`
+
+  * token - The token corresponding to the group
+  * username - The username sending the report
+  * message - The text of the report
+
+  Remove a report. Only entries from an open report can be removed.
+=end
+  post '/api/report/remove' do
+    puts params
+
+    group = Group.first :token => params[:token]
+
+    if group.nil?
+      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    user = User.first :account_id => group.account_id, :username => params[:username]
+
+    if user.nil?
+      return json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{params[:username]}\"", :error_username => params[:username]})
+    end
+
+    report = Report.current_report(group)
+
+    entry = Entry.first :report => report, :user => user, :message => params[:message]
+
+    if entry 
+      entry.destroy
+      json_response(200, {
+        :result => 'success',
+        :message => 'Entry was successfully deleted'
+      })
+    else
+      json_error(200, {
+        :error => 'entry_not_found',
+        :error_description => 'No entry was found with the provided text'
+      })
+    end
+  end
+
   post '/hooks/github' do
     payload = JSON.parse(params[:payload])
 

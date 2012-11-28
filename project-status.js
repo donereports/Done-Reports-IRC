@@ -91,20 +91,37 @@ ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
   self.set_lastasked("hero", username);
 };
 
-ProjectStatus.prototype.send_confirmation = function(nick, channel) {
+ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
   var self = this;
 
-  var replies = [
-    nick + ": Thanks!",
-    nick + ": Got it!",
-    nick + ": Cheers!",
-    nick + ": Nice.",
-    nick + ": Great, thanks!",
-    nick + ": Sweet. Thanks!",
-    nick + ": Ok! Got it!",
-    nick + ": Nicely done.",
-    "Thanks, " + nick
-  ];
+  var replies;
+
+  if(type == 'remove') {
+    replies = [
+      nick + ": ok it's gone",
+      nick + ": erased!",
+      nick + ": ok I removed it",
+      nick + ": ok I got rid of it",
+      nick + ": gone!"
+    ];
+  } else {
+    replies = [
+      nick + ": Thanks!",
+      nick + ": Got it!",
+      nick + ": Cheers!",
+      nick + ": cheers!",
+      nick + ": Nice.",
+      nick + ": nice",
+      nick + ": Great, thanks!",
+      nick + ": Sweet. Thanks!",
+      nick + ": Ok! Got it!",
+      nick + ": ok!",
+      nick + ": Nicely done.",
+      nick + ": awesome!",
+      nick + ": Awesome!",
+      "Thanks, " + nick
+    ];
+  }
 
   self.zen.send_privmsg(channel, replies[Math.floor(Math.random()*replies.length)]);
 }
@@ -244,9 +261,32 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
       self.send_confirmation(nick, channel);
     } else {
       if(response.error == "user_not_found") {
-        zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
+        self.zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
       } else {
-        zen.send_privmsg(channel, "Something went wrong trying to store your report!");
+        self.zen.send_privmsg(channel, "Something went wrong trying to store your entry!");
+      }
+    }
+  });
+}
+
+ProjectStatus.prototype.remove_response = function(username, message, nick, channel) {
+  var self = this;
+
+  console.log("Removing...");
+
+  // Send the message to the API
+  self.submit_report(username, 'remove', message, function(response){
+    console.log("Got a response!");
+    console.log(response);
+    if(response.result == 'success') {
+      self.send_confirmation(nick, channel, 'remove');
+    } else {
+      if(response.error == "user_not_found") {
+        self.zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
+      } else if(response.error == "entry_not_found") {
+        self.zen.send_privmsg(channel, "Couldn't find that entry, make sure the text matches exactly");
+      } else {
+        self.zen.send_privmsg(channel, "Something went wrong trying to remove your entry!");
       }
     }
   });
@@ -258,7 +298,7 @@ ProjectStatus.prototype.submit_report = function(username, type, message, callba
   var req = http.request({
     host: self.config.submit_api.host,
     port: self.config.submit_api.port,
-    path: "/api/report/new",
+    path: (type == "remove" ? "/api/report/remove" : "/api/report/new"),
     method: "POST",
     headers: {
       'Host': self.config.submit_api.host
