@@ -108,6 +108,10 @@ sub.on('message', function(channel, message) {
             projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
           }
         });
+      } else if(match=msg.data.raw_message.match(/!undone (.+)/)) {
+        console.log(username + " undid something: " + match[1]);
+
+        projects.remove_response(username, match[1], msg.data.sender, msg.data.channel);
       }
 
       if(done.message) {
