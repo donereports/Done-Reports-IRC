@@ -98,11 +98,16 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel) {
     nick + ": Thanks!",
     nick + ": Got it!",
     nick + ": Cheers!",
+    nick + ": cheers!",
     nick + ": Nice.",
+    nick + ": nice",
     nick + ": Great, thanks!",
     nick + ": Sweet. Thanks!",
     nick + ": Ok! Got it!",
+    nick + ": ok!",
     nick + ": Nicely done.",
+    nick + ": awesome!",
+    nick + ": Awesome!",
     "Thanks, " + nick
   ];
 
