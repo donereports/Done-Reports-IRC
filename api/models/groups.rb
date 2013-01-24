@@ -8,6 +8,7 @@ class Group
 
   property :token, String, :length => 128
   property :github_token, String, :length => 32
+  property :irc_channel, String, :length => 100
   property :name, String, :length => 128
   property :email_recipient, String, :length => 255
   property :due_day, String, :length => 30
