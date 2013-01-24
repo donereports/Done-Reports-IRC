@@ -97,6 +97,58 @@ class Controller < Sinatra::Base
     end
   end
 
+  # Handles all Github hooks http://developer.github.com/v3/repos/hooks/
+  # Create a hook:
+  # curly -H "Authorization: Bearer XXXX" https://api.github.com/repos/USER/REPO/hooks -d '{"name":"web","active":true,"events":["commit_comment","create","delete","download","follow","fork","fork_apply","gist","gollum","issue_comment","issues","member","public","pull_request","pull_request_review_comment","push","status","team_add","watch"],"config":{"url":"https://status-report.geoloqi.com/hook/github?token=XXXX","content_type":"json"}}' -H "Content-type: application/json"
+
+  post '/hook/github' do
+    event = env['HTTP_X_GITHUB_EVENT']
+
+    if event.nil?
+      return json_error(400, {
+        error: 'missing_type',
+        error_description: 'Expecting an X-Github-Event HTTP header but none was present'
+      })
+    end
+
+    begin
+      json = JSON.parse(request.body.read)
+    rescue => e
+      return json_error(400, {
+        error: 'bad_request',
+        error_description: e
+      })
+    end
+
+    if params[:token]
+      group = Group.first :github_token => params[:token]
+    end
+
+    if group.nil?
+      return json_error(403, {
+        error: 'forbidden',
+        error_description: "No group found for token: #{params[:token]}"
+      })
+    end
+
+    commits = Commit.create_from_payload group, event, json
+
+    if !commits.is_a? Array
+      commits = [commits]
+    end
+
+    commits.each do |commit|
+      begin
+        RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
+      rescue => e
+        puts "Exception!"
+        puts e
+      end
+    end
+
+    {result: "ok"}.to_json
+  end
+
   post '/hooks/github' do
     payload = JSON.parse(params[:payload])
 
