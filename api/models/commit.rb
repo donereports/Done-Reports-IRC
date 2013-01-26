@@ -19,9 +19,15 @@ class Commit
 
   def self.create_from_payload(group, type, payload)
     repo = Repo.first_or_create(:link => payload["repository"]["html_url"], :group => group)
-    user = User.first(:account_id => group.account_id, :github_username => payload["sender"]["login"])
     now = Time.now
-    username = payload["sender"]["login"]
+
+    if payload["sender"]
+      username = payload["sender"]["login"]
+      user = User.first(:account_id => group.account_id, :github_username => username)
+    else
+      username = ""
+      user = nil
+    end
 
     case type
     when "commit_comment"
@@ -116,7 +122,7 @@ class Commit
         user: user,
         date: now,
         text: "#{username} #{payload["action"]} comment: #{summary}...",
-        link: payload["comment"]["url"]
+        link: payload["issue"]["html_url"]
       })
     when "issues"
       Commit.create({
@@ -176,8 +182,10 @@ class Commit
           events << Commit.create({
             type: "commit",
             repo: repo,
-            user: user,
+            user: User.first(:account_id => group.account_id, :github_email => commit["author"]["email"]),
             date: now,
+            user_name: commit["author"]["name"],
+            user_email: commit["author"]["email"],
             text: commit["message"],
             link: commit["url"]
           })

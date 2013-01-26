@@ -16,5 +16,8 @@ class Group
   property :due_timezone, String, :length => 100
   property :send_reminder, Integer  # Number of hours before the deadline to send a reminder email
 
+  property :github_organization, String, :length => 100
+  property :github_access_token, String, :length => 255
+
   property :created_at, DateTime
 end

@@ -13,6 +13,50 @@ namespace :db do
   end
 end
 
+namespace :github do
+  # Add the appropriate Github hooks to all repositories on the account
+  task :add_hooks do
+
+    Account.all.each do |account|
+
+      account.groups.each do |group|
+
+        response = RestClient.get "https://api.github.com/orgs/#{group.github_organization}/repos", :authorization => "Bearer #{group.github_access_token}"
+        repos = JSON.parse response
+
+        repos.each do |repo|
+          puts repo["name"]
+
+          # Remove all existing hooks
+          json = RestClient.get repo["hooks_url"], :authorization => "Bearer #{group.github_access_token}"
+          hooks = JSON.parse json
+          hooks.each do |hook|
+            puts hook["url"]
+            response = RestClient.delete hook["url"], :authorization => "Bearer #{group.github_access_token}"
+            puts response
+          end
+
+          # Add the new correct hook
+          # '{"name":"web","active":true,"events":["commit_comment","create","delete","download","follow","fork","fork_apply","gist","gollum","issue_comment","issues","member","public","pull_request","pull_request_review_comment","push","status","team_add","watch"],"config":{"url":"https://status-report.geoloqi.com/hook/github?token=XXXX","content_type":"json"}}'
+          payload = {
+            name: "web",
+            active: true,
+            events: ["commit_comment","create","delete","download","follow","fork","fork_apply","gist","gollum","issue_comment","issues","member","public","pull_request","pull_request_review_comment","push","status","team_add","watch"],
+            config: {
+              url: "https://status-report.geoloqi.com/hook/github?token=#{group.github_token}",
+              content_type: "json"
+            }
+          }
+          response = RestClient.post repo["hooks_url"], payload.to_json, :authorization => "Bearer #{group.github_access_token}"
+          puts response
+        end
+
+      end #group
+    end #account
+
+  end
+end
+
 namespace :report do
   task :cron do
 
