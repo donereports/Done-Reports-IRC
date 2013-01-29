@@ -174,7 +174,7 @@ class Commit
       repo = nil
       payload["commits"].each do |commit|
         if commit["distinct"]
-          repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+)/)[0]
+          repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+/)[0]
           repo = Repo.first_or_create :link => repo_url, :group => group
           events << Commit.create({
             type: "commit",
