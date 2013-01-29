@@ -96,31 +96,43 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
 
   var replies;
 
-  if(type == 'remove') {
-    replies = [
-      nick + ": ok it's gone",
-      nick + ": erased!",
-      nick + ": ok I removed it",
-      nick + ": ok I got rid of it",
-      nick + ": gone!"
-    ];
-  } else {
-    replies = [
-      nick + ": Thanks!",
-      nick + ": Got it!",
-      nick + ": Cheers!",
-      nick + ": cheers!",
-      nick + ": Nice.",
-      nick + ": nice",
-      nick + ": Great, thanks!",
-      nick + ": Sweet. Thanks!",
-      nick + ": Ok! Got it!",
-      nick + ": ok!",
-      nick + ": Nicely done.",
-      nick + ": awesome!",
-      nick + ": Awesome!",
-      "Thanks, " + nick
-    ];
+  switch(type) {
+    case 'remove':
+      replies = [
+        nick + ": ok it's gone",
+        nick + ": erased!",
+        nick + ": ok I removed it",
+        nick + ": ok I got rid of it",
+        nick + ": gone!"
+      ];
+      break;
+    case 'blocking':
+      replies = [
+        nick + ": Sorry to hear that!",
+        nick + ": I will remember that",
+        nick + ": I hope it is resolved soon!",
+        nick + ": :(",
+        nick + ": Thanks for letting me know!"
+      ];
+      break;
+    default:
+      replies = [
+        nick + ": Thanks!",
+        nick + ": Got it!",
+        nick + ": Cheers!",
+        nick + ": cheers!",
+        nick + ": Nice.",
+        nick + ": nice",
+        nick + ": Great, thanks!",
+        nick + ": Sweet. Thanks!",
+        nick + ": Ok! Got it!",
+        nick + ": ok!",
+        nick + ": Nicely done.",
+        nick + ": awesome!",
+        nick + ": Awesome!",
+        "Thanks, " + nick
+      ];
+      break;
   }
 
   self.zen.send_privmsg(channel, replies[Math.floor(Math.random()*replies.length)]);
