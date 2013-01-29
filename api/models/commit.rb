@@ -18,6 +18,7 @@ class Commit
   property :updated_at, DateTime
 
   def self.create_from_payload(group, type, payload)
+    # Most events have a repository.html_url key, except for "push" events. In that case, repo will be nil.
     repo = Repo.first_or_create(:link => payload["repository"]["html_url"], :group => group)
     now = Time.now
 
@@ -36,7 +37,7 @@ class Commit
         repo: repo,
         user: user,
         date: now,
-        comment: payload["comment"]
+        text: payload["comment"]
       })
     when "create"
       Commit.create({
@@ -170,15 +171,11 @@ class Commit
       })
     when "push"
       events = []
-      events << Commit.create({
-        type: type,
-        repo: repo,
-        user: user,
-        date: now,
-        text: "#{username} pushed #{payload["size"]} commits"
-      })
+      repo = nil
       payload["commits"].each do |commit|
         if commit["distinct"]
+          repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+)/)[0]
+          repo = Repo.first_or_create :link => repo_url, :group => group
           events << Commit.create({
             type: "commit",
             repo: repo,
@@ -191,6 +188,13 @@ class Commit
           })
         end
       end
+      events << Commit.create({
+        type: type,
+        repo: repo,
+        user: user,
+        date: now,
+        text: "#{username} pushed #{payload["size"]} commits"
+      })
       events
     when "team_add"
       text = "#{username} "
@@ -216,7 +220,7 @@ class Commit
         repo: repo,
         user: user,
         date: now,
-        text: "#{payload["sender"]["login"]} #{payload["action"]} #{payload["repository"]["full_name"]}",
+        text: "#{payload["sender"]["login"]} #{payload["action"]} watching #{payload["repository"]["full_name"]}",
         link: repo.link
       })
     end

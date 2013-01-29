@@ -133,6 +133,13 @@ class Controller < Sinatra::Base
 
     commits = Commit.create_from_payload group, event, json
 
+    if commits.nil?
+      puts "-======================================-"
+      puts "No entry found for payload"
+      jj json
+      return json_response 200, {result: "no_data"}
+    end
+
     if !commits.is_a? Array
       commits = [commits]
     end
@@ -146,7 +153,7 @@ class Controller < Sinatra::Base
       end
     end
 
-    {result: "ok"}.to_json
+    json_response 200, {result: "ok"}
   end
 
   post '/hooks/github' do

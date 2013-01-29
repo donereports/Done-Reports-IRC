@@ -12,6 +12,7 @@ class Repo
   property :updated_at, DateTime
 
   def name
+    return "" if link.nil? or link == ""
     link.match(/github\.com\/(.+\/.+)/)[1]
   end
 
