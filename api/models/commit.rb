@@ -172,18 +172,20 @@ class Commit
     when "push"
       events = []
       repo = nil
+      user = nil
       payload["commits"].each do |commit|
         if commit["distinct"]
           repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+/)[0]
           repo = Repo.first_or_create :link => repo_url, :group => group
+          user = User.first(:account_id => group.account_id, :github_email => commit["author"]["email"])
           events << Commit.create({
             type: "commit",
             repo: repo,
-            user: User.first(:account_id => group.account_id, :github_email => commit["author"]["email"]),
+            user: user,
             date: now,
             user_name: commit["author"]["name"],
             user_email: commit["author"]["email"],
-            text: commit["message"],
+            text: "#{commit["author"]["email"]} committed: \" #{commit["message"]}\"",
             link: commit["url"]
           })
         end
@@ -193,7 +195,7 @@ class Commit
         repo: repo,
         user: user,
         date: now,
-        text: "#{username} pushed #{payload["size"]} commits"
+        text: "#{user.github_username} pushed #{payload["commits"].length} commits"
       })
       events
     when "team_add"
