@@ -28,7 +28,13 @@ namespace :github do
           response = RestClient.get "https://api.github.com/orgs/#{group.github_organization}/repos?page=#{page}&per_page=100", :authorization => "Bearer #{group.github_access_token}"
           repos = JSON.parse response
 
+          skip = false
+
           repos.each do |repo|
+
+            # skip = false if repo["name"] == "Munin-Plugins"
+            # next if skip == true
+
             puts "========================"
             puts repo["name"]
 
@@ -67,13 +73,132 @@ namespace :github do
 end
 
 namespace :report do
-  task :cron do
 
+  def ses_client
     ses = AWS::SES::Base.new(
       :access_key_id     => SiteConfig.aws_key_id,
       :secret_access_key => SiteConfig.aws_secret
     )
+  end
 
+  def send_report(report)
+    ses = ses_client
+    group = report.group
+    account = group.account
+
+    # Create the object that will be passed into the email erb template
+    email_data = {
+      :group => nil,
+      :report => nil,
+      :report_localtime => nil,
+      :users => []
+    }
+
+    puts "  Group '#{group.name}'"
+    email_data[:group] = group
+
+    puts "    Report ##{report.id}"
+    email_data[:report] = report
+
+    zone = Timezone::Zone.new :zone => group.due_timezone
+
+    # If the current time is past the due date, close the report and send an email summary
+    if DateTime.now > report.date_due
+      if report.date_completed.nil?
+        report.date_completed = DateTime.now
+        report.save
+      end
+      email_data[:report_localtime] = report.date_completed.to_time.localtime(zone.utc_offset)
+
+      # Each user gets their own section
+      account.users.each do |user|
+        # Only include this user in the email if they have some entries
+        if report.entries.all(:user => user).count > 0
+
+          puts "      #{user.username}"
+          num_entries = 0
+
+          # Gather all the entries for this report, grouped by type
+          types = [
+            {:type => 'past',     :title => 'What did you do?', :entries => []},
+            {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
+            {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
+            {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
+            {:type => 'unknown',  :title => 'Other Updates', :entries => []},
+          ]
+          types.each do |type|
+            entries = report.entries.all(:type => type[:type], :user => user)
+            if entries.count > 0 
+              puts "        #{type[:title]}"
+              entries.each do |entry| 
+                puts "          * #{entry.message}"
+                num_entries += 1
+                type[:entries] << entry
+              end
+            end
+          end
+
+          # Find any repos this user committed to during the report period
+          repos = Repo.all(:commits => Commit.all(:user => user, 
+            :date.gt => report.date_started, 
+            :date.lt => report.date_completed))
+
+          if repos.count > 0
+            type = {
+              :type => 'commits', :title => 'Active Projects', :entries => []
+            }
+            puts "        Commits"
+            repos.each do |r|
+              puts "          * #{r.name}"
+              type[:entries] << r
+            end
+            types << type
+          end
+
+          if num_entries > 0
+            email_data[:users] << {
+              :user => user,
+              :types => types
+            }
+          end
+
+        end
+      end
+
+      if email_data[:users].count > 0
+
+        # Merge the data with the email template in email.erb
+        puts "------"
+        template = Erubis::Eruby.new File.read 'views/email.erb'
+        email_html = template.result email_data
+        puts email_html
+
+        template_text = Erubis::Eruby.new File.read 'views/email_text.erb'
+        email_text = template_text.result email_data
+        puts email_text
+        puts "------"
+
+        # Send the email via Amazon SES now
+        ses.send_email :to => group.email_recipient.split(","),
+          :source => 'done@geoloqi.com',
+          :subject => 'Report',
+          :text_body => email_text,
+          :html_body => email_html
+
+      end
+
+    # If the current time is past the reminder time, send out reminder emails
+    elsif report.date_reminder != nil && DateTime.now > report.date_reminder
+      report.date_reminder_sent = DateTime.now
+      report.save
+
+    else
+      puts "      In progress"
+    end
+
+  end
+
+  task :cron do
     # This is a cron task that runs every 5 minutes.
 
     # Send out any reminders for deadlines coming soon.
@@ -84,121 +209,23 @@ namespace :report do
 
       account.groups.each do |group|
 
-        # Create the object that will be passed into the email erb template
-        email_data = {
-          :group => nil,
-          :report => nil,
-          :report_localtime => nil,
-          :users => []
-        }
-
-        puts "  Group '#{group.name}'"
-        email_data[:group] = group
-
         # Find an open report, if there are none, then this will create one
         report = Report.current_report(group)
-        puts "    Report ##{report.id}"
-        email_data[:report] = report
 
-        zone = Timezone::Zone.new :zone => group.due_timezone
-
-        # If the current time is past the due date, close the report and send an email summary
-        if DateTime.now > report.date_due
-          report.date_completed = DateTime.now
-          email_data[:report_localtime] = report.date_completed.to_time.localtime(zone.utc_offset)
-          report.save
-
-          # Each user gets their own section
-          account.users.each do |user|
-            # Only include this user in the email if they have some entries
-            if report.entries.all(:user => user).count > 0
-
-              puts "      #{user.username}"
-              num_entries = 0
-
-              # Gather all the entries for this report, grouped by type
-              types = [
-                {:type => 'past',     :title => 'What did you do?', :entries => []},
-                {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
-                {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
-                {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
-                {:type => 'unknown',  :title => 'Other Updates', :entries => []},
-              ]
-              types.each do |type|
-                entries = report.entries.all(:type => type[:type], :user => user)
-                if entries.count > 0 
-                  puts "        #{type[:title]}"
-                  entries.each do |entry| 
-                    puts "          * #{entry.message}"
-                    num_entries += 1
-                    type[:entries] << entry
-                  end
-                end
-              end
-
-              # Find any repos this user committed to during the report period
-              repos = Repo.all(:commits => Commit.all(:user => user, 
-                :date.gt => report.date_started, 
-                :date.lt => report.date_completed))
-
-              if repos.count > 0
-                type = {
-                  :type => 'commits', :title => 'Active Projects', :entries => []
-                }
-                puts "        Commits"
-                repos.each do |r|
-                  puts "          * #{r.name}"
-                  type[:entries] << r
-                end
-                types << type
-              end
-
-              if num_entries > 0
-                email_data[:users] << {
-                  :user => user,
-                  :types => types
-                }
-              end
-
-            end
-          end
-
-          if email_data[:users].count > 0
-
-            # Merge the data with the email template in email.erb
-            puts "------"
-            template = Erubis::Eruby.new File.read 'views/email.erb'
-            email_html = template.result email_data
-            puts email_html
-
-            template_text = Erubis::Eruby.new File.read 'views/email_text.erb'
-            email_text = template_text.result email_data
-            puts email_text
-            puts "------"
-
-            # Send the email via Amazon SES now
-            ses.send_email :to => group.email_recipient.split(","),
-              :source => 'done@geoloqi.com',
-              :subject => 'Report',
-              :text_body => email_text,
-              :html_body => email_html
-
-          end
-
-        # If the current time is past the reminder time, send out reminder emails
-        elsif report.date_reminder != nil && DateTime.now > report.date_reminder
-          report.date_reminder_sent = DateTime.now
-          report.save
-
-
-
-        else
-          puts "      In progress"
-        end
+        send_report report
 
       end # end group
     end # end account
+  end
 
+  task :send, :id do |task, id|
+
+    report = Report.first :id => id[:id]
+    if report.nil?
+      raise "Report #{id} not found"
+    end
+
+    send_report report
   end
 
   task :test do
