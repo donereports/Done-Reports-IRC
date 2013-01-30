@@ -19,29 +19,6 @@ ProjectStatus.prototype.rkey = function(key) {
 }
 
 
-// Given a nick, find the corresponding username by checking aliases defined in the config file
-ProjectStatus.prototype.username_from_nick = function(nick) {
-  var self = this;
-
-  nick = nick.replace(/away$/, '').replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
-
-  for(var i in self.config.users) {
-    var user = self.config.users[i];
-
-    if(user.username == nick) {
-      return nick;
-    }
-
-    for(var j in user.nicks) {
-      if(user.nicks[j] == nick)
-        return user.username;
-    }
-  }
-
-  return nick;
-}
-
-
 ProjectStatus.prototype.ask_past = function(channel, username, nick) {
   var self = this;
 
@@ -266,7 +243,7 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
   self.set_lastreplied(type, username);
 
   // Send the message to the API
-  self.submit_report(username, type, message, function(response){
+  self.submit_report(channel, username, type, message, function(response){
     console.log("Got a response!");
     console.log(response);
     if(response.entry) {
@@ -287,7 +264,7 @@ ProjectStatus.prototype.remove_response = function(username, message, nick, chan
   console.log("Removing...");
 
   // Send the message to the API
-  self.submit_report(username, 'remove', message, function(response){
+  self.submit_report(channel, username, 'remove', message, function(response){
     console.log("Got a response!");
     console.log(response);
     if(response.result == 'success') {
@@ -304,16 +281,19 @@ ProjectStatus.prototype.remove_response = function(username, message, nick, chan
   });
 }
 
-ProjectStatus.prototype.submit_report = function(username, type, message, callback) {
+ProjectStatus.prototype.submit_report = function(channel, username, type, message, callback) {
   var self = this;
 
+  var group = self.config.group_for_channel(channel);
+  var user = self.config.user(username);
+
   var req = http.request({
-    host: self.config.submit_api.host,
-    port: self.config.submit_api.port,
+    host: group.submit_api.host,
+    port: group.submit_api.port,
     path: (type == "remove" ? "/api/report/remove" : "/api/report/new"),
     method: "POST",
     headers: {
-      'Host': self.config.submit_api.host
+      'Host': group.submit_api.host
     }
   }, function(channelRes) {
     channelRes.setEncoding('utf8');
@@ -338,8 +318,11 @@ ProjectStatus.prototype.submit_report = function(username, type, message, callba
     }
   });
   req.write(querystring.stringify({
-    "token": self.config.submit_api.token,
+    "token": group.submit_api.token,
     "username": username,
+    "email": user.email,
+    "github_username": user.github_username,
+    "github_email": user.github_email,
     "type": type,
     "message": message
   }));
@@ -353,7 +336,13 @@ ProjectStatus.prototype.fetch_user_locations = function(callback) {
   var tokens = "";
   for(var i in self.config.users) {
     var user = self.config.users[i];
-    tokens += user.token + ",";
+    if(user.token != false) {
+      tokens += user.token + ",";
+    }
+  }
+
+  if(tokens == "") {
+    return;
   }
 
   self.geoloqi_request("GET", "/1/share/last?geoloqi_token=" + tokens, function(data){

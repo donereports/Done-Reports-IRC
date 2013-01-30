@@ -15,6 +15,88 @@ var redis = zen.get_redis_client();
 
 var projects = new projectStatus.ProjectStatus(zen, redis, config);
 
+
+// Set up some helper methods on the config object
+
+// Return a list of all users across all groups with a new "group" key with their channel
+config.users = function() {
+  var users = [];
+  for(var i in this.groups) {
+    var group = this.groups[i];
+    for(var j in group.users) {
+      var user = group.users[j];
+      user.channel = group.channel;
+      user.timezone = group.timezone;
+      users.push(user);
+    }
+  }
+
+  return users;
+}
+
+// Return a specific user given their username
+config.user = function(username) {
+  var users = this.users();
+  for(var i in users) {
+    if(users[i].username == username) {
+      return users[i];
+    }
+  }
+}
+
+config.group_for_user = function(username) {
+  for(var i in this.groups) {
+    var group = this.groups[i];
+    for(var j in group.users) {
+      var user = group.users[j];
+      if(user.username == username) {
+        return group;
+      }
+    }
+  }
+  return false;
+}
+
+config.group_for_channel = function(channel) {
+  for(var i in this.groups) {
+    var group = this.groups[i];
+    if(group.channel == channel) {
+      return group;
+    }
+  }
+  return false;
+}
+
+// Given a nick, find the corresponding username by checking aliases defined in the config file
+config.username_from_nick = function(nick) {
+  username = nick.replace(/away$/, '').replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
+
+  var users = this.users();
+  for(var i in users) {
+    var user = users[i];
+
+    if(user.username == username) {
+      return username;
+    }
+
+    for(var j in user.nicks) {
+      if(user.nicks[j] == username)
+        return user.username;
+    }
+  }
+
+  return false;
+}
+
+// Return all channels in the config file
+config.channels = function() {
+  channels = [];
+  for(var i in this.groups) {
+    channels.push(this.groups[i].channel);
+  }
+}
+
+
 function now() {
   return parseInt( (new Date()).getTime() / 1000 );
 }
@@ -25,8 +107,27 @@ sub.on('message', function(channel, message) {
   var sender = msg.data.sender;
   if(msg.version == 1) {
 
-    // TODO: Normalize the nick (msg.data.sender) and map to a username
-    var username = projects.username_from_nick(msg.data.sender);
+    var username = config.username_from_nick(msg.data.sender);
+    console.log("Username: "+username);
+
+    // Reject users that are not in the config file
+    if(username == false) {
+      zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
+      return false;
+    }
+
+    if(msg.data.channel.substring(0,1) != "#") {
+      return false;
+    }
+
+    // The report is associated with the channel the message comes in on, not the user's home channel
+    var user = config.user(username);
+
+    var group = config.group_for_channel(msg.data.channel);
+    if(group == false) {
+      zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
+      return false;
+    }
 
     if(msg.type == "directed_privmsg") {
       console.log(msg);
@@ -193,78 +294,86 @@ cronFunc = function(){
 
   var currentTime = new time.Date();
 
-  // Get the list of people in the channel right now
-  projects.members(config.channel, function(err, members){
+  for(var g in config.groups) {
+    (function(group){
 
-    for(var i in config.users) {
-      (function(user){
+      // Get the list of people in the channel right now
+      projects.members(group.channel, function(err, members){
 
-        console.log("Checking " + user.username);
+        for(var i in group.users) {
+          (function(user){
 
-        // Set the date relative to the timezone of the user's last location.
-        // Fall back to Los Angeles timezone if not known.
-        var timezone = "America/Los_Angeles";
+            console.log("Checking " + user.username);
 
-        if(user_locations[user.geoloqi_user_id] && user_locations[user.geoloqi_user_id].context && user_locations[user.geoloqi_user_id].context.timezone) {
-          timezone = user_locations[user.geoloqi_user_id].context.timezone;
-        }
+            // Set the date relative to the timezone of the user's last location.
+            // Fall back to Los Angeles timezone if not known.
+            var timezone = user.timezone;
 
-        currentTime.setTimezone(timezone);
+            if(user.geoloqi_user_id && user_locations[user.geoloqi_user_id] && user_locations[user.geoloqi_user_id].context && user_locations[user.geoloqi_user_id].context.timezone) {
+              timezone = user_locations[user.geoloqi_user_id].context.timezone;
+            }
 
-        // Check if we should ask this person.
-        // Based on 
-        //  1) current time (morning vs evening)
-        //  2) when we last asked them (don't ask more than once every 3 hours)
-        //  3) when we last got a response from them (don't ask more than 4 hours after getting a reply)
-        //  4) when they are at their computer (last time they spoke in IRC)
+            currentTime.setTimezone(timezone);
 
-        // Only ask what you're working on during normal hours
-        if(currentTime.getHours() >= 9 && currentTime.getHours() <= 17) {
+            // Check if we should ask this person.
+            // Based on 
+            //  1) current time (morning vs evening)
+            //  2) when we last asked them (don't ask more than once every 3 hours)
+            //  3) when we last got a response from them (don't ask more than 4 hours after getting a reply)
+            //  4) when they are at their computer (last time they spoke in IRC)
 
-          projects.get_lastasked("past", user.username, function(err, lastasked){
-            projects.get_lastreplied("past", user.username, function(err, lastreplied){
-              console.log("  Last asked " + user.username + " on " + lastasked);
-              console.log("  Last got a reply from " + user.username + " on " + lastreplied);
+            // Only ask what you're working on during normal hours
+            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 17) {
 
-              if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
-                if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
+              projects.get_lastasked("past", user.username, function(err, lastasked){
+                projects.get_lastreplied("past", user.username, function(err, lastreplied){
+                  console.log("  Last asked " + user.username + " on " + lastasked);
+                  console.log("  Last got a reply from " + user.username + " on " + lastreplied);
+                  console.log(members);
 
-                  if( members.indexOf(user.username) != -1 ) {
-                    console.log("  " + user.username + " is online!");
+                  if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
+                    if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
 
-                    if( lastasked == null && lastreplied == null ) {
-                      // First time this user is in the system. Bail out some portion 
-                      // of the time to stagger the first questions to everyone.
-                      if( Math.random() < 0.4 ) {
-                        return;
+                      if( members.indexOf(user.username) != -1 ) {
+                        console.log("  " + user.username + " is online!");
+
+                        if( lastasked == null && lastreplied == null ) {
+                          // First time this user is in the system. Bail out some portion 
+                          // of the time to stagger the first questions to everyone.
+                          if( Math.random() < 0.4 ) {
+                            return;
+                          }
+                        }
+
+                        console.log("  asking " + user.username + " on " + group.channel + " now!");
+                        projects.get_nick(group.channel, user.username, function(err, current_nick){
+                          projects.ask_past(group.channel, user.username, (current_nick ? current_nick : user.username));
+                        });
+
                       }
+
                     }
-
-                    console.log("  asking " + user.username + " now!");
-                    projects.get_nick(config.channel, user.username, function(err, current_nick){
-                      projects.ask_past(config.channel, user.username, (current_nick ? current_nick : user.username));
-                    });
-
                   }
+                });
+              });
 
-                }
-              }
-            });
-          });
+            }
+            /*
+            // Only ask what you've done in the afternoon
+            if(currentTime.getHours() >= 13 && currentTime.getHours() <= 19) {
+
+
+
+            }
+            */
+
+          })(group.users[i]);
 
         }
-        // Only ask what you've done in the afternoon
-        if(currentTime.getHours() >= 13 && currentTime.getHours() <= 19) {
 
-
-
-        }
-
-      })(config.users[i]);
-
-    }
-
-  });
+      });
+    })(config.groups[g]);
+  }
 
 };
 
