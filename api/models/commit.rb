@@ -185,7 +185,7 @@ class Commit
             date: now,
             user_name: commit["author"]["name"],
             user_email: commit["author"]["email"],
-            text: "#{commit["author"]["email"]} committed: \" #{commit["message"]}\"",
+            text: "#{commit["author"]["email"]} committed: \"#{commit["message"]}\"",
             link: commit["url"]
           })
         end
