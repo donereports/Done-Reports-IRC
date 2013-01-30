@@ -101,35 +101,50 @@ function now() {
   return parseInt( (new Date()).getTime() / 1000 );
 }
 
+function is_explicit_command(message) {
+  if(message.match(/^!(done|todo|block|hero|undone) .+/)
+     || message.match(/^done! .+/)
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 sub.subscribe('in');
 sub.on('message', function(channel, message) {
   var msg = JSON.parse(message);
   var sender = msg.data.sender;
   if(msg.version == 1) {
 
-    if(msg.type == "directed_privmsg") {
+    var username = config.username_from_nick(msg.data.sender);
+    console.log("Username: "+username);
 
-      var username = config.username_from_nick(msg.data.sender);
-      console.log("Username: "+username);
-
-      // Reject users that are not in the config file
-      if(username == false) {
+    // Reject users that are not in the config file
+    if(username == false) {
+      if(is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
-        return false;
       }
+      return false;
+    }
 
-      if(msg.data.channel.substring(0,1) != "#") {
-        return false;
-      }
+    if(msg.data.channel.substring(0,1) != "#") {
+      return false;
+    }
 
-      // The report is associated with the channel the message comes in on, not the user's home channel
-      var user = config.user(username);
+    // The report is associated with the channel the message comes in on, not the user's home channel
+    var user = config.user(username);
 
-      var group = config.group_for_channel(msg.data.channel);
-      if(group == false) {
+    var group = config.group_for_channel(msg.data.channel);
+    if(group == false) {
+      console.log(msg);
+      if(msg.data.message && is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
-        return false;
       }
+      return false;
+    }
+
+    if(msg.type == "privmsg") {
 
       console.log(msg);
 
@@ -140,35 +155,41 @@ sub.on('message', function(channel, message) {
         type: false
       };
 
-      if(match=msg.data.raw_message.match(/^!done (.+)/)) {
+      if(match=msg.data.message.match(/^done! (.+)/)) {
+        console.log(username + " did something: " + match[1]);
+
+        done.message = match[1];
+        done.type = "past";
+
+      } else if(match=msg.data.message.match(/^!done (.+)/)) {
         console.log(username + " did something: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "past";
 
-      } else if(match=msg.data.raw_message.match(/^!todo (.+)/)) {
+      } else if(match=msg.data.message.match(/^!todo (.+)/)) {
         console.log(username + " will do: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "future";
 
-      } else if(match=msg.data.raw_message.match(/^!block(?:ing)? (.+)/)) {
+      } else if(match=msg.data.message.match(/^!block(?:ing)? (.+)/)) {
         console.log(username + " is blocked on: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "blocking";
 
-      } else if(match=msg.data.raw_message.match(/^!hero (.+)/)) {
+      } else if(match=msg.data.message.match(/^!hero (.+)/)) {
         console.log(username + "'s hero: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "hero";
 
-      } else if(match=msg.data.raw_message.match(/^loqi: (.+)/i)) {
+      } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 
         // Check if we recently asked them a question, and if so, record a reply
@@ -210,7 +231,7 @@ sub.on('message', function(channel, message) {
             projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
           }
         });
-      } else if(match=msg.data.raw_message.match(/!undone (.+)/)) {
+      } else if(match=msg.data.message.match(/!undone (.+)/)) {
         console.log(username + " undid something: " + match[1]);
 
         projects.remove_response(username, match[1], msg.data.sender, msg.data.channel);
@@ -221,39 +242,7 @@ sub.on('message', function(channel, message) {
       }
 
     }
-    if(msg.type == "privmsg") {
-      console.log(msg);
 
-      projects.spoke(msg.data.channel, username, msg.data.sender);
-
-      if(match=msg.data.message.match(/^done! (.+)/)) {
-        var done = {
-          message: false,
-          type: false
-        };
-
-        console.log(username + " did something: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "past";
-
-        projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
-      }
-
-
-      if(msg.data.message == "who is in the channel right now?") {
-        projects.members(msg.data.channel, function(err, reply){
-          zen.send_privmsg(msg.data.channel, JSON.stringify(reply));
-
-        });
-      }
-
-      if(msg.data.message == "ask now") {
-        projects.ask_past(msg.data.channel, username, msg.data.sender);
-      }
-
-    }
     if(msg.type == "privmsg_action") {
       console.log(msg);
 
