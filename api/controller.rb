@@ -11,7 +11,11 @@ class Controller < Sinatra::Base
   `POST /api/report/new`
 
   * token - The token corresponding to the group
-  * username - The username sending the report
+  * user data - The user sending the report
+  *   - username
+  *   - email
+  *   - github_email
+  *   - github_username
   * type - past, future, blocking, hero, unknown
   * message - The text of the report
 
@@ -26,11 +30,15 @@ class Controller < Sinatra::Base
       return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
     end
 
-    user = User.first :account_id => group.account_id, :username => params[:username]
-
-    if user.nil?
-      return json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{params[:username]}\"", :error_username => params[:username]})
-    end
+    user = User.first_or_create({
+      :account_id => group.account_id, 
+      :username => params[:username]
+    }, {
+      :email => params[:email],
+      :github_username => params[:github_username],
+      :github_email => params[:github_email],
+      :created_at => Time.now
+    })
 
     report = Report.current_report(group)
 
@@ -156,6 +164,8 @@ class Controller < Sinatra::Base
     json_response 200, {result: "ok"}
   end
 
+# Old Github post hook
+=begin
   post '/hooks/github' do
     payload = JSON.parse(params[:payload])
 
@@ -190,6 +200,7 @@ class Controller < Sinatra::Base
     end
     json_response 200, {:result => 'ok'}
   end
+=end
 
   def json_error(code, data)
     return [code, {
