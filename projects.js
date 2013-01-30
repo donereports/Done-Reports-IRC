@@ -107,29 +107,30 @@ sub.on('message', function(channel, message) {
   var sender = msg.data.sender;
   if(msg.version == 1) {
 
-    var username = config.username_from_nick(msg.data.sender);
-    console.log("Username: "+username);
-
-    // Reject users that are not in the config file
-    if(username == false) {
-      zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
-      return false;
-    }
-
-    if(msg.data.channel.substring(0,1) != "#") {
-      return false;
-    }
-
-    // The report is associated with the channel the message comes in on, not the user's home channel
-    var user = config.user(username);
-
-    var group = config.group_for_channel(msg.data.channel);
-    if(group == false) {
-      zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
-      return false;
-    }
-
     if(msg.type == "directed_privmsg") {
+
+      var username = config.username_from_nick(msg.data.sender);
+      console.log("Username: "+username);
+
+      // Reject users that are not in the config file
+      if(username == false) {
+        zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
+        return false;
+      }
+
+      if(msg.data.channel.substring(0,1) != "#") {
+        return false;
+      }
+
+      // The report is associated with the channel the message comes in on, not the user's home channel
+      var user = config.user(username);
+
+      var group = config.group_for_channel(msg.data.channel);
+      if(group == false) {
+        zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
+        return false;
+      }
+
       console.log(msg);
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
