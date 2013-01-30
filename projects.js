@@ -76,12 +76,15 @@ config.username_from_nick = function(nick) {
     var user = users[i];
 
     if(user.username == username) {
+      console.log("'"+nick+"' matched username " + user.username);
       return username;
     }
 
     for(var j in user.nicks) {
-      if(user.nicks[j] == username)
+      if(user.nicks[j] == username) {
+        console.log("'"+nick+"' matched nick " + username);
         return user.username;
+      }
     }
   }
 
@@ -297,7 +300,7 @@ cronFunc = function(){
 
             // Set the date relative to the timezone of the user's last location.
             // Fall back to Los Angeles timezone if not known.
-            var timezone = user.timezone;
+            var timezone = group.timezone;
 
             if(user.geoloqi_user_id && user_locations[user.geoloqi_user_id] && user_locations[user.geoloqi_user_id].context && user_locations[user.geoloqi_user_id].context.timezone) {
               timezone = user_locations[user.geoloqi_user_id].context.timezone;
