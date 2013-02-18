@@ -247,7 +247,7 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
     console.log("Got a response!");
     console.log(response);
     if(response.entry) {
-      self.send_confirmation(nick, channel);
+      self.send_confirmation(nick, channel, type);
     } else {
       if(response.error == "user_not_found") {
         self.zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
