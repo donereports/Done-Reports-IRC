@@ -76,12 +76,15 @@ config.username_from_nick = function(nick) {
     var user = users[i];
 
     if(user.username == username) {
+      console.log("'"+nick+"' matched username " + user.username);
       return username;
     }
 
     for(var j in user.nicks) {
-      if(user.nicks[j] == username)
+      if(user.nicks[j] == username) {
+        console.log("'"+nick+"' matched nick " + username);
         return user.username;
+      }
     }
   }
 
@@ -101,10 +104,8 @@ function now() {
   return parseInt( (new Date()).getTime() / 1000 );
 }
 
-function is_explicit_command(message) {
-  if(message.match(/^!(done|todo|block|hero|undone) .+/)
-     || message.match(/^done! .+/)
-  ) {
+function is_explicit_command(m) {
+  if(m.match(/^!(done|todo|block|hero|undone) .+/) || m.match(/^done! .+/)) {
     return true;
   } else {
     return false;
@@ -113,23 +114,24 @@ function is_explicit_command(message) {
 
 sub.subscribe('in');
 sub.on('message', function(channel, message) {
+  console.log(message);
   var msg = JSON.parse(message);
   var sender = msg.data.sender;
-  if(msg.version == 1) {
+  if(msg.version == 1 && msg.type == "privmsg") {
 
     var username = config.username_from_nick(msg.data.sender);
-    console.log("Username: "+username);
+    console.log("Username: "+username+" ("+msg.data.sender+")");
 
     // Reject users that are not in the config file
     if(username == false) {
       if(is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
       }
-      return false;
+      return;
     }
 
     if(msg.data.channel.substring(0,1) != "#") {
-      return false;
+      return;
     }
 
     // The report is associated with the channel the message comes in on, not the user's home channel
@@ -141,7 +143,7 @@ sub.on('message', function(channel, message) {
       if(msg.data.message && is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
       }
-      return false;
+      return;
     }
 
     if(msg.type == "privmsg") {
@@ -248,20 +250,20 @@ sub.on('message', function(channel, message) {
 
 
     }
-    if(msg.type == "join") {
+    if(username && msg.type == "join") {
       console.log(msg);
 
       projects.joined(msg.data.channel, username, msg.data.sender);
     }
-    if(msg.type == "part") {
+    if(username && msg.type == "part") {
       console.log(msg);
 
       projects.parted(msg.data.channel, username, msg.data.sender);
     }
-    if(msg.type == "quit") {
+    if(username && msg.type == "quit") {
       console.log(msg);
       // Quit messages don't include a channel
-      projects.parted(config.channel, username, msg.data.sender);
+      // projects.parted(config.channel, username, msg.data.sender);
     }
   }
 });
@@ -297,7 +299,7 @@ cronFunc = function(){
 
             // Set the date relative to the timezone of the user's last location.
             // Fall back to Los Angeles timezone if not known.
-            var timezone = user.timezone;
+            var timezone = group.timezone;
 
             if(user.geoloqi_user_id && user_locations[user.geoloqi_user_id] && user_locations[user.geoloqi_user_id].context && user_locations[user.geoloqi_user_id].context.timezone) {
               timezone = user_locations[user.geoloqi_user_id].context.timezone;
