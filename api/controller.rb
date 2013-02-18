@@ -153,11 +153,13 @@ class Controller < Sinatra::Base
     end
 
     commits.each do |commit|
-      begin
-        RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
-      rescue => e
-        puts "Exception!"
-        puts e
+      if commit.irc_message
+        begin
+            RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
+        rescue => e
+          puts "Exception!"
+          puts e
+        end
       end
     end
 

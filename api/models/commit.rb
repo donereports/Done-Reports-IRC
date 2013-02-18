@@ -173,6 +173,7 @@ class Commit
       events = []
       repo = nil
       user = nil
+      author = nil
       payload["commits"].each do |commit|
         if commit["distinct"]
           repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+/)[0]
@@ -189,13 +190,14 @@ class Commit
             link: commit["url"]
           })
         end
+        author = commit["author"]["email"]
       end
       events << Commit.create({
         type: type,
         repo: repo,
         user: user,
         date: now,
-        text: "#{user.github_username} pushed #{payload["commits"].length} commits"
+        text: "#{user ? user.github_username : author} pushed #{payload["commits"].length} commits"
       })
       events
     when "team_add"
@@ -230,8 +232,12 @@ class Commit
 
   # Return a string appropriate for sending to an IRC channel
   def irc_message
-    prefix = repo.link.gsub(/^https?:\/\//, '')
-    "[#{prefix}] #{text} #{link}"
+    if type == "commit"
+      return false
+    else
+      prefix = repo.link.gsub(/^https?:\/\//, '')
+      return "[#{prefix}] #{text} #{link}"
+    end
   end
 
 end
