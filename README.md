@@ -124,26 +124,20 @@ Delivery
 
 After collecting peoples' responses, we need to publish a report with everyone's responses.
 
-Reports are sent out every day at 6pm Portland time. 
+Reports are sent out every day at 9pm local time. 
 
 Future Enhancements
 -------------------
 
-Post reports to the private wiki and send a link in IRC.
-
-* Send when 5/8 of people submit their reports
-* Reports will be sent no longer than 20 hours apart
-* Reports will be sent between 9am-5pm Pacific time
-
-When posting a report, sends a message to #geoloqi-team.
-
-Anybody who was not in the channel at the time the report is posted will get the message the next time they join the channel as a private message.
+* Post reports to the resources wiki and send a link in IRC.
+* Anybody who was not in the channel at the time the report is posted will get the message the next time they join the channel as a private message.
+* This could remove the need for sending the report via Email
 
 
 API
 ===
 
-The server knows the current report that is being collected.
+The server knows the "current" report where responses are being collected.
 
 ### `POST /api/report/new`
 
@@ -154,12 +148,12 @@ The server knows the current report that is being collected.
 
 Post a new entry to the current open report. (This should be renamed to /api/entry/new)
 
-### `POST /hooks/github`
+### `POST /hook/github`
 
 * ?github_token=xx - The internal Github auth token for the group
-* payload - The payload from Github
+* ... whatever Github sends
 
-Handle Github's post-commit hooks here.
+This endpoint handles Github's event hooks. Note this is different from the standard git post-commit hooks. A full list of events sent by Github can be [found here](http://developer.github.com/v3/activity/events/types/).
 
 
 

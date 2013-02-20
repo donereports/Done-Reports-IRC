@@ -119,8 +119,14 @@ class Controller < Sinatra::Base
       })
     end
 
+    if params['payload']
+      body = params['payload']
+    else
+      body = request.body.read
+    end
+
     begin
-      json = JSON.parse(request.body.read)
+      json = JSON.parse(body)
     rescue => e
       return json_error(400, {
         error: 'bad_request',
