@@ -13,7 +13,7 @@ class Repo
 
   def name
     return "" if link.nil? or link == ""
-    link.match(/\/([^\/]+\/[^\/]+)$/)[1]
+    link.match(/[:\/]([^\/]+\/[^\/]+)(?:\.git)$/)[1]
   end
 
   def message # The email template expects to be able to call "message" on objects

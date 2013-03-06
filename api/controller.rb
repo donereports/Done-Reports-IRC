@@ -39,6 +39,7 @@ class Controller < Sinatra::Base
       :github_email => params[:github_email],
       :gitlab_email => params[:gitlab_email],
       :gitlab_username => params[:gitlab_username],
+      :gitlab_user_id => params[:gitlab_user_id],
       :created_at => Time.now
     })
 
@@ -224,7 +225,13 @@ class Controller < Sinatra::Base
     end
 
     # Look for a matching project by the repo URL in the payload
-    repo = Repo.first_or_create(:link => payload["repository"]["homepage"], :group => group)
+    if payload["repository"]["homepage"]
+      link = payload["repository"]["homepage"]
+    else
+      link = payload["repository"]["url"]
+    end
+
+    repo = Repo.first_or_create(:link => link, :group => group)
     if repo
       payload["commits"].each do |commit|
         puts commit.inspect
@@ -241,23 +248,22 @@ class Controller < Sinatra::Base
         )
       end
 
-      # Query the Gitlab API to find the email for this user
-      guser = JSON.parse RestClient.get "#{group.gitlab_api_url}/users/#{payload['user_id']}?private_token=#{group.gitlab_private_token}"
-
-      user = User.first :account_id => group.account_id, :gitlab_email => guser["email"]
-      event = Commit.create({
-        type: 'push',
-        repo: repo,
-        user: user,
-        date: Time.now,
-        text: "#{user.username} pushed #{payload["commits"].length} commits"
-      })
-      if event.irc_message
-        begin
-          RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message
-        rescue => e
-          puts "Exception!"
-          puts e
+      user = User.first :account_id => group.account_id, :gitlab_user_id => payload['user_id']
+      if user
+        event = Commit.create({
+          type: 'push',
+          repo: repo,
+          user: user,
+          date: Time.now,
+          text: "#{user.username} pushed #{payload["commits"].length} commits"
+        })
+        if event.irc_message
+          begin
+            RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message
+          rescue => e
+            puts "Exception!"
+            puts e
+          end
         end
       end
     end

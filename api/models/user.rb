@@ -12,6 +12,7 @@ class User
   property :github_username, String, :length => 255
   property :gitlab_email, String, :length => 255
   property :gitlab_username, String, :length => 255
+  property :gitlab_user_id, Integer
 
   property :created_at, DateTime
 end

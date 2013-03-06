@@ -325,6 +325,7 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
     "github_email": user.github_email,
     "gitlab_username": user.gitlab_username,
     "gitlab_email": user.gitlab_email,
+    "gitlab_user_id": user.gitlab_user_id,
     "type": type,
     "message": message
   }));
