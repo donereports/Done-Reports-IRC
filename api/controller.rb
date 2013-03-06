@@ -161,7 +161,7 @@ class Controller < Sinatra::Base
     commits.each do |commit|
       if commit.irc_message
         begin
-            RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
+          RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
         rescue => e
           puts "Exception!"
           puts e
@@ -237,6 +237,26 @@ class Controller < Sinatra::Base
           :user_email => commit["author"]["email"],
           :user => user
         )
+      end
+
+      # Query the Gitlab API to find the email for this user
+      guser = JSON.parse RestClient.get "#{group.gitlab_api_url}/users/#{payload['user_id']}?private_token=#{group.gitlab_private_token}"
+
+      user = User.first :account_id => group.account_id, :gitlab_email => guser["email"]
+      event = Commit.create({
+        type: 'push',
+        repo: repo,
+        user: user,
+        date: Time.now,
+        text: "#{user.username} pushed #{payload["commits"].length} commits"
+      })
+      if event.irc_message
+        begin
+          RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message
+        rescue => e
+          puts "Exception!"
+          puts e
+        end
       end
     end
     json_response 200, {:result => 'ok'}

@@ -19,5 +19,8 @@ class Group
   property :github_organization, String, :length => 100
   property :github_access_token, String, :length => 255
 
+  property :gitlab_api_url, String, :length => 255
+  property :gitlab_private_token, String, :length => 255
+
   property :created_at, DateTime
 end
