@@ -210,6 +210,39 @@ class Controller < Sinatra::Base
   end
 =end
 
+  # Gitlab post-receive hook
+  post '/hooks/gitlab/:token' do
+    payload = JSON.parse(env['rack.input'].read)
+    puts payload
+
+    group = Group.first :github_token => params[:token]
+
+    if group.nil?
+      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    # Look for a matching project by the repo URL in the payload
+    repo = Repo.first_or_create(:link => payload["repository"]["homepage"], :group => group)
+    if repo
+      payload["commits"].each do |commit|
+        puts commit.inspect
+        # Attempt to map the commit to a user account. Will return nil if not found
+        user = User.first :account_id => group.account_id, :gitlab_email => commit["author"]["email"]
+        Commit.create(
+          :repo => repo,
+          :link => commit["url"],
+          :text => commit["message"],
+          :date => Time.parse(commit["timestamp"]),
+          :user_name => commit["author"]["name"],
+          :user_email => commit["author"]["email"],
+          :user => user
+        )
+      end
+    end
+    json_response 200, {:result => 'ok'}
+  end
+
+
   def json_error(code, data)
     return [code, {
         'Content-Type' => 'application/json;charset=UTF-8',
