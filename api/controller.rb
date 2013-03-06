@@ -213,7 +213,7 @@ class Controller < Sinatra::Base
 =end
 
   # Gitlab post-receive hook
-  post '/hooks/gitlab/:token' do
+  post '/hook/gitlab/:token' do
     payload = JSON.parse(env['rack.input'].read)
     puts payload
 
