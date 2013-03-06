@@ -323,6 +323,8 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
     "email": user.email,
     "github_username": user.github_username,
     "github_email": user.github_email,
+    "gitlab_username": user.gitlab_username,
+    "gitlab_email": user.gitlab_email,
     "type": type,
     "message": message
   }));
@@ -336,7 +338,7 @@ ProjectStatus.prototype.fetch_user_locations = function(callback) {
   var tokens = "";
   for(var i in self.config.users) {
     var user = self.config.users[i];
-    if(user.token != false) {
+    if(user.token) {
       tokens += user.token + ",";
     }
   }
