@@ -39,7 +39,7 @@ class Controller < Sinatra::Base
       :github_email => params[:github_email],
       :gitlab_email => params[:gitlab_email],
       :gitlab_username => params[:gitlab_username],
-      :gitlab_user_id => params[:gitlab_user_id],
+      :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
       :created_at => Time.now
     })
 
