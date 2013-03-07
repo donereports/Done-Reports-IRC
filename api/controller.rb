@@ -237,6 +237,10 @@ class Controller < Sinatra::Base
         puts commit.inspect
         # Attempt to map the commit to a user account. Will return nil if not found
         user = User.first :account_id => group.account_id, :gitlab_email => commit["author"]["email"]
+        # Try searching for their github email instead
+        if user.nil?
+          user = User.first :account_id => group.account_id, :github_email => commit["author"]["email"]
+        end
         Commit.create(
           :repo => repo,
           :link => commit["url"],
