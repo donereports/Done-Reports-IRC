@@ -18,9 +18,10 @@ class ProjectTable
         FROM `commits`
         WHERE `repo_id` = ?
           AND `user_id` IS NOT NULL
+          AND `date` > ?
         GROUP BY `user_id`
         ORDER BY num DESC
-        LIMIT 10', repo.id)
+        LIMIT 10', repo.id, (DateTime.now - days))
       user_count = Hash[*query.map{|q| [q.user_id, q.num]}.flatten]
       users = User.all(:id => query.map{|q| q.user_id})
 
