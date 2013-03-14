@@ -1,7 +1,7 @@
 <table id="projects">
   <% @data.each do |row| %>
     <tr>
-      <td class="projectName" style="width: 260px;"><%= row[:name] %></td>
+      <td class="projectName" style="width: 360px;"><%= row[:name] %></td>
       <td class="projectDudes">
         <% row[:users].each do |user| %>
           <img src="<%= user[:img] %>" height="48" />
