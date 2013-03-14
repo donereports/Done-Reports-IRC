@@ -274,6 +274,17 @@ class Controller < Sinatra::Base
     json_response 200, {:result => 'ok'}
   end
 
+  get '/statusboard/project-table/:token' do
+    group = Group.first :github_token => params[:token]
+
+    if group.nil?
+      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    @data = ProjectTable.response(group, (params[:days] ? params[:days].to_i : 14))
+    html = erb :project_table, :layout => false
+    halt 200, html    
+  end
 
   def json_error(code, data)
     return [code, {

@@ -2,6 +2,7 @@ ENV['TZ'] = 'UTC'
 Encoding.default_internal = 'UTF-8'
 require 'rubygems'
 require 'bundler/setup'
+require 'digest/md5'
 
 Bundler.require
 Dir.glob(['lib', 'models', 'helpers'].map! {|d| File.join File.expand_path(File.dirname(__FILE__)), d, '*.rb'}).each {|f| require f}
