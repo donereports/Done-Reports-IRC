@@ -30,9 +30,12 @@ class ProjectTable
       }
 
       users.each do |user|
+        email = user.email # Fall back to the user's email address if no github email is set
+        email = user.github_email if user.github_email
+
         row[:users] << {
           name: user.github_username,
-          img: "http://www.gravatar.com/avatar/#{Digest::MD5.hexdigest(user.email.downcase)}",
+          img: "http://www.gravatar.com/avatar/#{Digest::MD5.hexdigest(email.downcase)}?s=144&d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png",
           num: user_count[user.id]
         }
       end
