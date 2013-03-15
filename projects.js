@@ -60,7 +60,7 @@ config.group_for_user = function(username) {
 config.group_for_channel = function(channel) {
   for(var i in this.groups) {
     var group = this.groups[i];
-    if(group.channel == channel) {
+    if(group.channel.toLowerCase() == channel.toLowerCase()) {
       return group;
     }
   }
