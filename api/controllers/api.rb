@@ -131,7 +131,7 @@ class Controller < Sinatra::Base
         :github_email => params[:github_email],
         :gitlab_email => params[:gitlab_email],
         :gitlab_username => params[:gitlab_username],
-        :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
+        :gitlab_user_id => params[:gitlab_user_id].to_i,
         :nicks => params[:nicks],
         :created_at => Time.now,
         :groups => [group]
@@ -152,7 +152,8 @@ class Controller < Sinatra::Base
 
     json_response(200, {
       :result => 'success',
-      :username => user.username
+      :username => user.username,
+      :user_id => user.id
     })
   end
 
