@@ -1,7 +1,18 @@
+class Controller < Sinatra::Base
 
-class ProjectTable
+  get '/statusboard/project-table/:token' do
+    group = Group.first :github_token => params[:token]
 
-  def self.response(group, days=7)
+    if group.nil?
+      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    @data = get_project_table_data(group, (params[:days] ? params[:days].to_i : 14))
+    html = erb :project_table, :layout => false
+    halt 200, html    
+  end
+
+  def get_project_table_data(group, days)
     data = []
 
     query = repository(:default).adapter.select('SELECT COUNT(1) AS num, `repo_id`
