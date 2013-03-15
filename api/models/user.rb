@@ -13,7 +13,7 @@ class User
   property :gitlab_email, String, :length => 255
   property :gitlab_username, String, :length => 255
   property :gitlab_user_id, Integer
-  property :nicks, Text
+  property :nicks, String, :length => 512
 
   property :created_at, DateTime
 end

@@ -114,7 +114,7 @@ class Controller < Sinatra::Base
     end
   end
 
-  post '/api/user/create' do
+  post '/api/user/new' do
     group = load_group params[:token]
 
     user = User.first({
@@ -144,12 +144,11 @@ class Controller < Sinatra::Base
       user.github_email = params[:github_email]
       user.gitlab_email = params[:gitlab_email]
       user.gitlab_username = params[:gitlab_username]
-      user.gitlab_user_id = (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0)
+      user.gitlab_user_id = params[:gitlab_user_id].to_i
       user.nicks = params[:nicks]
       user.groups << group
       user.save
     end
-
 
     json_response(200, {
       :result => 'success',
