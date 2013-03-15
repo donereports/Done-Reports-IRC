@@ -245,7 +245,7 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
   // Send the message to the API
   self.submit_report(channel, username, type, message, function(response){
     console.log("Got a response!");
-    console.log(response);
+    // console.log(response);
     if(response.entry) {
       self.send_confirmation(nick, channel, type);
     } else {
@@ -287,49 +287,67 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
   var group = self.config.group_for_channel(channel);
   var user = self.config.user(username);
 
-  var req = http.request({
-    host: group.submit_api.host,
-    port: group.submit_api.port,
-    path: (type == "remove" ? "/api/report/remove" : "/api/report/new"),
-    method: "POST",
-    headers: {
-      'Host': group.submit_api.host
-    }
-  }, function(channelRes) {
-    channelRes.setEncoding('utf8');
-    
-    if(channelRes.statusCode != 200) {
-      console.log('[api] ' + channelRes.statusCode);
-      response = '';
-      channelRes.on('data', function (chunk) {
-        response += chunk;
+  try {
+    var req = http.request({
+      host: group.submit_api.host,
+      port: group.submit_api.port,
+      path: (type == "remove" ? "/api/report/remove" : "/api/report/new"),
+      method: "POST",
+      headers: {
+        'Host': group.submit_api.host
+      }
+    }, function(channelRes) {
+      channelRes.setEncoding('utf8');
+      
+      if(channelRes.statusCode != 200) {
+        console.log('[api] ' + channelRes.statusCode);
+        response = '';
+        channelRes.on('data', function (chunk) {
+          response += chunk;
+        });
+        channelRes.on('end', function(){
+          console.log('[api] ERROR');
+          try {
+            errorInfo = JSON.parse(response);
+            console.log(errorInfo);
+          } catch(e) {
+            errorInfo = {
+              error: 'unknown'
+            }
+          }
+          callback(errorInfo);
+        });
+      } else {
+        response = '';
+        channelRes.on('data', function (chunk) {
+          response += chunk;
+        });
+        channelRes.on('end', function(){
+          callback(JSON.parse(response));          
+        });
+      }
+    });
+    req.write(querystring.stringify({
+      "token": group.submit_api.token,
+      "username": username,
+      "type": type,
+      "message": message
+    }));
+    req.addListener('error', function(socketException){
+      console.log('[api] Socket Error!');
+//      console.log(socketException);
+      callback({
+        error: 'socket_error'
       });
-      channelRes.on('end', function(){
-        console.log('[api] ERROR: ' + response);
-      });
-    } else {
-      response = '';
-      channelRes.on('data', function (chunk) {
-        response += chunk;
-      });
-      channelRes.on('end', function(){
-        callback(JSON.parse(response));          
-      });
-    }
-  });
-  req.write(querystring.stringify({
-    "token": group.submit_api.token,
-    "username": username,
-    "email": user.email,
-    "github_username": user.github_username,
-    "github_email": user.github_email,
-    "gitlab_username": user.gitlab_username,
-    "gitlab_email": user.gitlab_email,
-    "gitlab_user_id": user.gitlab_user_id,
-    "type": type,
-    "message": message
-  }));
-  req.end();
+    });
+    req.end();
+  } catch(e) {
+    console.log('[api] EXCEPTION!');
+    callback({
+      error: 'exception',
+      error_description: 'An unknown error occurred'
+    });
+  }
 }
 
 

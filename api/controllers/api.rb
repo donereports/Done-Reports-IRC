@@ -10,7 +10,7 @@ class Controller < Sinatra::Base
     group
   end
 
-  def load_user(username)
+  def load_user(username, group)
     user = User.first :account_id => group.account_id, :username => username
 
     if user.nil?
@@ -37,7 +37,7 @@ class Controller < Sinatra::Base
   post '/api/report/new' do
     group = load_group params[:token]
 
-    user = load_user params[:username]
+    user = load_user params[:username], group
 
     # user = User.first_or_create({
     #   :account_id => group.account_id, 
@@ -56,22 +56,29 @@ class Controller < Sinatra::Base
 
     entry = report.create_entry :user => user, :type => params[:type], :message => params[:message]
 
-    json_response 200, {
-      :group => {
-        :name => group.name
-      }, 
-      :report => {
-        :report_id => report.id, 
-        :date_started => report.date_started
-      },
-      :entry => {
-        :entry_id => entry.id,
-        :username => entry.user.username,
-        :date => entry.date,
-        :type => entry.type,
-        :message => entry.message
+    if entry.id
+      json_response 200, {
+        :group => {
+          :name => group.name
+        }, 
+        :report => {
+          :report_id => report.id, 
+          :date_started => report.date_started
+        },
+        :entry => {
+          :entry_id => entry.id,
+          :username => entry.user.username,
+          :date => entry.date,
+          :type => entry.type,
+          :message => entry.message
+        }
       }
-    }
+    else
+      json_error 200, {
+        :error => 'unknown_error',
+        :error_description => 'There was a problem saving the entry'
+      }
+    end
   end
 
 
@@ -87,7 +94,7 @@ class Controller < Sinatra::Base
   post '/api/report/remove' do
     group = load_group params[:token]
 
-    user = load_user params[:username]
+    user = load_user params[:username], group
 
     report = Report.current_report(group)
 
