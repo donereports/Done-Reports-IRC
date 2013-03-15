@@ -107,6 +107,49 @@ class Controller < Sinatra::Base
     end
   end
 
+  post '/api/user/create' do
+    group = load_group params[:token]
+
+    user = User.first({
+      :account_id => group.account_id, 
+      :username => params[:username]
+    })
+
+    if user.nil?
+      user = User.create({
+        :account_id => group.account_id, 
+        :username => params[:username],
+        :email => params[:email],
+        :github_username => params[:github_username],
+        :github_email => params[:github_email],
+        :gitlab_email => params[:gitlab_email],
+        :gitlab_username => params[:gitlab_username],
+        :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
+        :nicks => params[:nicks],
+        :created_at => Time.now,
+        :groups => [group]
+      })
+      user
+    else
+      user.username = params[:username]
+      user.email = params[:email]
+      user.github_username = params[:github_username]
+      user.github_email = params[:github_email]
+      user.gitlab_email = params[:gitlab_email]
+      user.gitlab_username = params[:gitlab_username]
+      user.gitlab_user_id = (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0)
+      user.nicks = params[:nicks]
+      user.groups << group
+      user.save
+    end
+
+
+    json_response(200, {
+      :result => 'success',
+      :username => user.username
+    })
+  end
+
   # Returns a JSON config block for the group to be put into the IRC bot config file
   get '/api/group_config/:token' do
     group = load_group params[:token]
