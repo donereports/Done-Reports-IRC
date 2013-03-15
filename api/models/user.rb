@@ -3,8 +3,8 @@ class User
   property :id, Serial
 
   belongs_to :account
-
   has n, :commits
+  has n, :groups, :through => Resource
 
   property :username, String, :length => 255
   property :email, String, :length => 255
@@ -13,6 +13,7 @@ class User
   property :gitlab_email, String, :length => 255
   property :gitlab_username, String, :length => 255
   property :gitlab_user_id, Integer
+  property :nicks, Text
 
   property :created_at, DateTime
 end

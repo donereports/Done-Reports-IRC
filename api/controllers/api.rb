@@ -1,5 +1,25 @@
 class Controller < Sinatra::Base
 
+  def load_group(token)
+    group = Group.first :token => token
+
+    if group.nil?
+      halt json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    end
+
+    group
+  end
+
+  def load_user(username)
+    user = User.first :account_id => group.account_id, :username => username
+
+    if user.nil?
+      halt json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{username}\"", :error_username => username})
+    end
+
+    user
+  end
+
 =begin
   `POST /api/report/new`
 
@@ -15,26 +35,22 @@ class Controller < Sinatra::Base
   Post a new report. Automatically associated with the current open report for the group.
 =end
   post '/api/report/new' do
-    puts params
+    group = load_group params[:token]
 
-    group = Group.first :token => params[:token]
+    user = load_user params[:username]
 
-    if group.nil?
-      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
-    end
-
-    user = User.first_or_create({
-      :account_id => group.account_id, 
-      :username => params[:username]
-    }, {
-      :email => params[:email],
-      :github_username => params[:github_username],
-      :github_email => params[:github_email],
-      :gitlab_email => params[:gitlab_email],
-      :gitlab_username => params[:gitlab_username],
-      :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
-      :created_at => Time.now
-    })
+    # user = User.first_or_create({
+    #   :account_id => group.account_id, 
+    #   :username => params[:username]
+    # }, {
+    #   :email => params[:email],
+    #   :github_username => params[:github_username],
+    #   :github_email => params[:github_email],
+    #   :gitlab_email => params[:gitlab_email],
+    #   :gitlab_username => params[:gitlab_username],
+    #   :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
+    #   :created_at => Time.now
+    # })
 
     report = Report.current_report(group)
 
@@ -69,19 +85,9 @@ class Controller < Sinatra::Base
   Remove a report. Only entries from an open report can be removed.
 =end
   post '/api/report/remove' do
-    puts params
+    group = load_group params[:token]
 
-    group = Group.first :token => params[:token]
-
-    if group.nil?
-      return json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
-    end
-
-    user = User.first :account_id => group.account_id, :username => params[:username]
-
-    if user.nil?
-      return json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{params[:username]}\"", :error_username => params[:username]})
-    end
+    user = load_user params[:username]
 
     report = Report.current_report(group)
 
@@ -99,6 +105,32 @@ class Controller < Sinatra::Base
         :error_description => 'No entry was found with the provided text'
       })
     end
+  end
+
+  # Returns a JSON config block for the group to be put into the IRC bot config file
+  get '/api/group_config/:token' do
+    group = load_group params[:token]
+
+    data = {
+      channel: group.irc_channel,
+      timezone: group.due_timezone,
+      submit_api: {
+        host: "",
+        port: 80,
+        token: group.token
+      },
+      users: []
+    }
+
+    group.users.each do |user|
+      user_info = {
+        username: user.username,
+        nicks: (user.nicks ? user.nicks.split(',') : [])
+      }
+      data[:users] << user_info
+    end
+
+    json_response(200, data)
   end
 
 end

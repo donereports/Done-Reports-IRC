@@ -3,8 +3,8 @@ class Group
   property :id, Serial
 
   belongs_to :account
-
   has n, :reports
+  has n, :users, :through => Resource
 
   property :token, String, :length => 128
   property :github_token, String, :length => 32
