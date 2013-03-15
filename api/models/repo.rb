@@ -12,6 +12,10 @@ class Repo
   property :updated_at, DateTime
 
   def name
+    return self.name_from_link link
+  end
+
+  def self.name_from_link(link)
     return "" if link.nil? or link == ""
     if match=link.match(/[:\/]([^\/]+\/[^\/]+)(?:\.git)?$/)
       match[1]

@@ -15,7 +15,7 @@ class Controller < Sinatra::Base
   def get_project_table_data(group, days)
     data = []
 
-    query = repository(:default).adapter.select('SELECT COUNT(1) AS num, `repo_id`
+    query = repository(:default).adapter.select('SELECT COUNT(1) AS num, `repo_id` AS id, `repos`.`link`
       FROM `commits`
       JOIN `repos` ON `commits`.repo_id = `repos`.id
       WHERE `repos`.group_id = ?
@@ -23,8 +23,7 @@ class Controller < Sinatra::Base
       GROUP BY `repo_id`
       ORDER BY `num` DESC
       LIMIT 10', group.id, (DateTime.now - days))
-    repos = Repo.all(:id => query.map{|q| q.repo_id})
-    repos.each do |repo|
+    query.each do |repo|
       query = repository(:default).adapter.select('SELECT COUNT(1) AS num, `user_id`
         FROM `commits`
         WHERE `repo_id` = ?
@@ -32,12 +31,12 @@ class Controller < Sinatra::Base
           AND `date` > ?
         GROUP BY `user_id`
         ORDER BY num DESC
-        LIMIT 10', repo.id, (DateTime.now - days))
+        LIMIT 10', repo['id'], (DateTime.now - days))
       user_count = Hash[*query.map{|q| [q.user_id, q.num]}.flatten]
       users = User.all(:id => query.map{|q| q.user_id})
 
       row = {
-        name: repo.name,
+        name: Repo.name_from_link(repo['link']),
         users: []
       }
 
