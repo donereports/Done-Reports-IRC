@@ -40,7 +40,7 @@ class Controller < Sinatra::Base
       })
     end
 
-    commits = self.create_commit_from_github_payload group, event, json
+    commits = create_commit_from_github_payload group, event, json
 
     if commits.nil?
       puts "-======================================-"
@@ -105,7 +105,7 @@ class Controller < Sinatra::Base
   end
 =end
 
-  def self.create_commit_from_github_payload(group, type, payload)
+  def create_commit_from_github_payload(group, type, payload)
     # Most events have a repository.html_url key, except for "push" events. In that case, repo will be nil.
     repo = Repo.first_or_create(:link => payload["repository"]["html_url"], :group => group)
     now = Time.now
