@@ -99,7 +99,7 @@ class Controller < Sinatra::Base
     commits.each do |commit|
       if commit.irc_message
         begin
-          RestClient.post "#{group.zenircbot_url}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message, :token => group.zenircbot_token
+          group.send_irc_message commit.irc_message
         rescue => e
           puts "Exception!"
           puts e

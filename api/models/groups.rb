@@ -27,4 +27,8 @@ class Group
   property :gitlab_private_token, String, :length => 255
 
   property :created_at, DateTime
+
+  def send_irc_message(message)
+    RestClient.post "#{zenircbot_url}channel/#{URI.encode_www_form_component irc_channel}", :message => message, :token => zenircbot_token
+  end
 end

@@ -52,7 +52,7 @@ class Controller < Sinatra::Base
         })
         if event.irc_message
           begin
-            RestClient.post "#{group.zenircbot_url}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message, :token => group.zenircbot_token
+            group.send_irc_message event.irc_message
           rescue => e
             puts "Exception!"
             puts e
