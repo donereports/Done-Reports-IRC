@@ -107,7 +107,7 @@ function now() {
 }
 
 function is_explicit_command(m) {
-  if(m.match(/^!(done|todo|block|hero|undone) .+/) || m.match(/^done! .+/)) {
+  if(m.match(/^!(done|todo|block|hero|undone) .+/) || m.match(/^(done|todo|block|hero|undone)! .+/)) {
     return true;
   } else {
     return false;
@@ -119,7 +119,7 @@ sub.on('message', function(channel, message) {
   console.log(message);
   var msg = JSON.parse(message);
   var sender = msg.data.sender;
-  if(msg.version == 1 && msg.type == "privmsg") {
+  if(msg.version == 1) {
 
     var username = config.username_from_nick(msg.data.sender);
     console.log("Username: "+username+" ("+msg.data.sender+")");
@@ -132,20 +132,41 @@ sub.on('message', function(channel, message) {
       return;
     }
 
-    if(msg.data.channel.substring(0,1) != "#") {
+    if(msg.type == "quit") {
+      // Quit messages don't include a channel
+      projects.quit(username, msg.data.sender);
       return;
     }
 
-    // The report is associated with the channel the message comes in on, not the user's home channel
+    if(typeof msg.data.channel == 'undefined' || msg.data.channel.substring(0,1) != "#") {
+      return;
+    }
+
     var user = config.user(username);
 
-    var group = config.group_for_channel(msg.data.channel);
+    // The report is associated with the channel the message comes in on, not the user's home channel.
+    // Except for "quit" messages which don't provide a channel
+    var group;
+    if(msg.data.channel) {
+      group = config.group_for_channel(msg.data.channel);
+    } else {
+      group = config.group_for_user(username);
+    }
+
     if(group == false) {
-      console.log(msg);
       if(msg.data.message && is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
+      } else {
+        console.log("No group for channel");
       }
       return;
+    }
+
+    if(username && msg.type == "join") {
+      projects.joined(msg.data.channel, username, msg.data.sender);
+    }
+    if(username && msg.type == "part") {
+      projects.parted(msg.data.channel, username, msg.data.sender);
     }
 
     if(msg.type == "privmsg") {
@@ -158,6 +179,12 @@ sub.on('message', function(channel, message) {
         message: false,
         type: false
       };
+
+      if(msg.data.message == "!who") {
+        projects.members(group.channel, function(err, members){
+          console.log(members);
+        });
+      }
 
       if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
         console.log(username + " did something: " + match[1]);
@@ -244,21 +271,6 @@ sub.on('message', function(channel, message) {
       console.log(msg);
 
 
-    }
-    if(username && msg.type == "join") {
-      console.log(msg);
-
-      projects.joined(msg.data.channel, username, msg.data.sender);
-    }
-    if(username && msg.type == "part") {
-      console.log(msg);
-
-      projects.parted(msg.data.channel, username, msg.data.sender);
-    }
-    if(username && msg.type == "quit") {
-      console.log(msg);
-      // Quit messages don't include a channel
-      // projects.parted(config.channel, username, msg.data.sender);
     }
   }
 });
@@ -369,11 +381,9 @@ new cron('*/5 * * * *', cronFunc, null, true, "America/Los_Angeles");
 cronFunc();
 
 
-// TODO: Handle a web hook here so Github commits can be used to set last seen time for users too
 
-
-
-// TODO: Handle a web hook here for Geoloqi triggers when anyone gets to the office
-
-
+process.on('uncaughtException', function(err) {
+  console.log("!!!!!!!!!!!!!!!")
+  console.log(err);
+});
 

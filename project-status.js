@@ -210,6 +210,8 @@ ProjectStatus.prototype.joined = function(channel, username, nick) {
 ProjectStatus.prototype.parted = function(channel, username, nick) {
   var self = this;
 
+  console.log(username+" parted "+channel);
+
   // Remove this nick from the list of people currently in the channel.
   self.redis.srem(self.rkey(channel), username);
 
@@ -219,6 +221,18 @@ ProjectStatus.prototype.parted = function(channel, username, nick) {
   // Store the user's current nick
   self.redis.hset(self.rkey(channel+"-"+username), "nick", nick, function(){});
 };
+
+ProjectStatus.prototype.quit = function(username, nick) {
+  var self = this;
+
+  for(var i in self.config.groups) {
+    var group = self.config.groups[i];
+    console.log(username+" quit "+group.channel);
+
+    // Remove the user from each channel in the config file
+    self.parted(group.channel, username, nick);
+  }
+}
 
 
 
