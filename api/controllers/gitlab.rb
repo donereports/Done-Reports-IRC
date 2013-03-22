@@ -28,15 +28,17 @@ class Controller < Sinatra::Base
         if user.nil?
           user = User.first :account_id => group.account_id, :github_email => commit["author"]["email"]
         end
-        Commit.create(
-          :repo => repo,
-          :link => commit["url"],
-          :text => commit["message"],
-          :date => Time.parse(commit["timestamp"]),
-          :user_name => commit["author"]["name"],
-          :user_email => commit["author"]["email"],
-          :user => user
-        )
+        if user
+          Commit.create(
+            :repo => repo,
+            :link => commit["url"],
+            :text => commit["message"],
+            :date => Time.parse(commit["timestamp"]),
+            :user_name => commit["author"]["name"],
+            :user_email => commit["author"]["email"],
+            :user => user
+          )
+        end
       end
 
       user = User.first :account_id => group.account_id, :gitlab_user_id => payload['user_id']
@@ -50,7 +52,7 @@ class Controller < Sinatra::Base
         })
         if event.irc_message
           begin
-            RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message
+            RestClient.post "#{group.zenircbot_url}#{URI.encode_www_form_component group.irc_channel}", :message => event.irc_message, :token => group.zenircbot_token
           rescue => e
             puts "Exception!"
             puts e

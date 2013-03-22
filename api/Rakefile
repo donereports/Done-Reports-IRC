@@ -15,22 +15,6 @@ end
 
 namespace :github do
 
-  def hook_url(token)
-    "https://status-report.geoloqi.com/hook/github?token=#{token}"
-  end
-
-  def hook_payload(token)
-    {
-      name: "web",
-      active: true,
-      events: ["commit_comment","create","delete","download","follow","fork","fork_apply","gist","gollum","issue_comment","issues","member","public","pull_request","pull_request_review_comment","push","status","team_add","watch"],
-      config: {
-        url: hook_url(token),
-        content_type: "json"
-      }
-    }
-  end
-
   # Add a hook to just one repo
   task :add_hook, :org, :repo do |task, args|
     group = Group.first :github_organization => args[:org]
@@ -45,7 +29,7 @@ namespace :github do
       else
         hooks_url = "https://api.github.com/repos/#{repo}/hooks"
 
-        response = RestClient.post hooks_url, hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+        response = RestClient.post hooks_url, GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
         puts "Added hook to #{repo}"
         puts response
 
@@ -90,7 +74,7 @@ namespace :github do
                   #puts response
                 end
                 # Add the new hook
-                response = RestClient.post repo["hooks_url"], hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+                response = RestClient.post repo["hooks_url"], GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
                 puts "Added hook to #{repo['full_name']}"
                 puts response
               else
@@ -101,7 +85,7 @@ namespace :github do
                 puts hooks
                 if hooks.select{|h| h['config']['url'] == hook_url}.length == 0
                   # Add the new hook
-                  response = RestClient.post repo["hooks_url"], hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+                  response = RestClient.post repo["hooks_url"], GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
                   puts response
                 end
               end
@@ -116,7 +100,7 @@ namespace :github do
                   # Add the new hook
                   forks.each do |fork|
                     begin
-                      response = RestClient.post fork["hooks_url"], hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+                      response = RestClient.post fork["hooks_url"], GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
                       puts "Added hook to #{fork['full_name']}"
                     rescue
                     end

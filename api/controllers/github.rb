@@ -1,5 +1,48 @@
 class Controller < Sinatra::Base
 
+  post '/api/github_hook/add' do
+    group = load_group params[:token]
+
+    if params[:repo_url].nil?
+      return json_error(400, {
+        error: 'missing_field',
+        error_description: 'Parameter `repo_url` is required'
+      })
+    end
+
+    if (match=params[:repo_url].match(/https?:\/\/github\.com\/([^\/]+\/[^\/]+)/)) == nil
+      return json_error(400, {
+        error: 'invalid_repo_url',
+        error_description: 'Repo URL must be a Github URL like https://github.com/user/repo'
+      })
+    end
+    repo = match[1]
+
+    hooks_url = "https://api.github.com/repos/#{repo}/hooks"
+
+    # Check for existing hooks
+    hook_url = GithubHelper.hook_url(group.github_token)
+
+    json = RestClient.get hooks_url, :authorization => "Bearer #{group.github_access_token}"
+    hooks = JSON.parse json
+    if hooks.select{|h| h['config']['url'] == hook_url}.length == 0
+      # Add the new hook
+      response = RestClient.post hooks_url, GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+      puts "Added hook to #{repo}"
+      puts response
+      added = true
+    else
+      added = false
+    end
+
+    json_response(200, {
+      group_name: group.name,
+      repo_url: params[:repo_url],
+      repo: repo,
+      added: added
+    })
+  end
+
   # Handles all Github hooks http://developer.github.com/v3/repos/hooks/
   # Create a hook:
   # curly -H "Authorization: Bearer XXXX" https://api.github.com/repos/USER/REPO/hooks -d '{"name":"web","active":true,"events":["commit_comment","create","delete","download","follow","fork","fork_apply","gist","gollum","issue_comment","issues","member","public","pull_request","pull_request_review_comment","push","status","team_add","watch"],"config":{"url":"https://status-report.geoloqi.com/hook/github?token=XXXX","content_type":"json"}}' -H "Content-type: application/json"
@@ -56,7 +99,7 @@ class Controller < Sinatra::Base
     commits.each do |commit|
       if commit.irc_message
         begin
-          RestClient.post "#{SiteConfig[:zenircbot_url]}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message
+          RestClient.post "#{group.zenircbot_url}#{URI.encode_www_form_component group.irc_channel}", :message => commit.irc_message, :token => group.zenircbot_token
         rescue => e
           puts "Exception!"
           puts e

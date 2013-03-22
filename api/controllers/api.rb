@@ -136,6 +136,7 @@ class Controller < Sinatra::Base
         :created_at => Time.now,
         :groups => [group]
       })
+      status = 'created'
       user
     else
       user.username = params[:username]
@@ -148,10 +149,12 @@ class Controller < Sinatra::Base
       user.nicks = params[:nicks]
       user.groups << group
       user.save
+      status = 'updated'
     end
 
     json_response(200, {
       :result => 'success',
+      :status => status,
       :username => user.username,
       :user_id => user.id
     })
