@@ -159,88 +159,14 @@ ProjectStatus.prototype.set_lastreplied = function(type, username) {
 }
 
 
-// Store the last time we saw each person
-
-ProjectStatus.prototype.get_lastseen = function(username, callback) {
-  var self = this;
-
-  self.redis.get(self.rkey("lastseen-"+username), callback);
-};
-
-ProjectStatus.prototype.set_lastseen = function(username, nick) {
-  var self = this;
-
-  // Store the time they were last seen. This is updated any time the user
-  // says anything in any channel, joins any channel, or if any activity 
-  // from external sources (like Github) is seen.
-  self.redis.set(self.rkey("lastseen-"+username), now(), function(){});
-};
-
+// Tracks the current nick of each user based on the last time they spoke
 ProjectStatus.prototype.spoke = function(channel, username, nick) {
   var self = this;
 
-  // Add this nick to the list of people currently in the channel.
-  // Redundant with the "join" event, but could catch error cases.
-  self.redis.sadd(self.rkey(channel), username);
-
-  // Store the time they last spoke in this channel.
-  self.redis.hset(self.rkey(channel+"-"+username), "lastspoke", now(), function(){});
-
   // Store the user's current nick
   self.redis.hset(self.rkey(channel+"-"+username), "nick", nick, function(){});
-
-  self.set_lastseen(username);
-};
-
-ProjectStatus.prototype.joined = function(channel, username, nick) {
-  var self = this;
-
-  // Add this nick to the list of people currently in the channel.
-  self.redis.sadd(self.rkey(channel), username);
-
-  // Store the time they joined the channel.
-  self.redis.hset(self.rkey(channel+"-"+username), "joined", now(), function(){});
-
-  // Store the user's current nick
-  self.redis.hset(self.rkey(channel+"-"+username), "nick", nick, function(){});
-
-  self.set_lastseen(username);
-};
-
-ProjectStatus.prototype.parted = function(channel, username, nick) {
-  var self = this;
-
-  console.log(username+" parted "+channel);
-
-  // Remove this nick from the list of people currently in the channel.
-  self.redis.srem(self.rkey(channel), username);
-
-  // Store the time they parted the channel.
-  self.redis.hset(self.rkey(channel+"-"+username), "parted", now(), function(){});
-
-  // Store the user's current nick
-  self.redis.hset(self.rkey(channel+"-"+username), "nick", nick, function(){});
-};
-
-ProjectStatus.prototype.quit = function(username, nick) {
-  var self = this;
-
-  for(var i in self.config.groups) {
-    var group = self.config.groups[i];
-    console.log(username+" quit "+group.channel);
-
-    // Remove the user from each channel in the config file
-    self.parted(group.channel, username, nick);
-  }
 }
 
-
-
-ProjectStatus.prototype.members = function(channel, callback) {
-  var self = this;
-
-  self.redis.smembers(self.rkey(channel), callback);
-};
 
 ProjectStatus.prototype.get_nick = function(channel, username, callback) {
   var self = this;
@@ -364,6 +290,7 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
   }
 }
 
+/*
 
 ProjectStatus.prototype.fetch_user_locations = function(callback) {
   var self = this;
@@ -425,5 +352,6 @@ ProjectStatus.prototype.geoloqi_request = function(method, path, callback) {
   }).end();
 }
 
+*/
 
 module.exports.ProjectStatus = ProjectStatus;

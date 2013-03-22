@@ -71,7 +71,7 @@ config.group_for_channel = function(channel) {
 
 // Given a nick, find the corresponding username by checking aliases defined in the config file
 config.username_from_nick = function(nick) {
-  username = nick.replace(/away$/, '').replace(/^[-_]+/, '').replace(/[-_]+$/, '').replace(/\|m$/, '');
+  username = nick.replace(/away$/, '').replace(/^[-_]+/, '').replace(/[-_\|]+$/, '').replace(/\|m$/, '');
 
   var users = this.users();
   for(var i in users) {
@@ -114,12 +114,33 @@ function is_explicit_command(m) {
   }
 }
 
+var pendingNamesCallbacks = [];
+
+// Kick off a "NAMES" command, which will cause an event on the `sub` object to be triggered
+function get_users_in_channel(channel, callback) {
+  pendingNamesCallbacks.push(callback);
+  redis.publish('out', JSON.stringify({
+    version: 1,
+    type: 'raw',
+    command: "NAMES "+channel
+  }));
+}
+
 sub.subscribe('in');
 sub.on('message', function(channel, message) {
   console.log(message);
   var msg = JSON.parse(message);
   var sender = msg.data.sender;
   if(msg.version == 1) {
+
+    if(msg.type == "names") {
+      // Run any pending callbacks with the list of nicks
+      for(var i in pendingNamesCallbacks) {
+        pendingNamesCallbacks[i](msg.data.nicks);
+      }
+      pendingNamesCallbacks = [];
+      return;
+    }
 
     var username = config.username_from_nick(msg.data.sender);
     console.log("Username: "+username+" ("+msg.data.sender+")");
@@ -132,12 +153,6 @@ sub.on('message', function(channel, message) {
       return;
     }
 
-    if(msg.type == "quit") {
-      // Quit messages don't include a channel
-      projects.quit(username, msg.data.sender);
-      return;
-    }
-
     if(typeof msg.data.channel == 'undefined' || msg.data.channel.substring(0,1) != "#") {
       return;
     }
@@ -145,12 +160,9 @@ sub.on('message', function(channel, message) {
     var user = config.user(username);
 
     // The report is associated with the channel the message comes in on, not the user's home channel.
-    // Except for "quit" messages which don't provide a channel
     var group;
     if(msg.data.channel) {
       group = config.group_for_channel(msg.data.channel);
-    } else {
-      group = config.group_for_user(username);
     }
 
     if(group == false) {
@@ -160,13 +172,6 @@ sub.on('message', function(channel, message) {
         console.log("No group for channel");
       }
       return;
-    }
-
-    if(username && msg.type == "join") {
-      projects.joined(msg.data.channel, username, msg.data.sender);
-    }
-    if(username && msg.type == "part") {
-      projects.parted(msg.data.channel, username, msg.data.sender);
     }
 
     if(msg.type == "privmsg") {
@@ -184,6 +189,9 @@ sub.on('message', function(channel, message) {
         projects.members(group.channel, function(err, members){
           console.log(members);
         });
+      }
+      if(msg.data.message == "!ask") {
+        cronFunc();
       }
 
       if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
@@ -249,6 +257,9 @@ sub.on('message', function(channel, message) {
               // done.type = "unknown";
 
             }
+
+            // Then set the lastasked time to 0 to avoid logging another response from them in the near future
+            projects.set_lastasked("all", "past");
           }
 
           if(done.message) {
@@ -277,6 +288,7 @@ sub.on('message', function(channel, message) {
 
 
 // Update everyone's timezone and location data periodically
+/*
 var user_locations = {};
 var location_cron_job_func = function(){
   projects.fetch_user_locations(function(locations){
@@ -284,8 +296,9 @@ var location_cron_job_func = function(){
     console.log("Fetched new location data");
   });
 };
-new cron('*/30 * * * *', location_cron_job_func, null, true, "America/Los_Angeles");
+new cron('*(CUT)/30 * * * *', location_cron_job_func, null, true, "America/Los_Angeles");
 location_cron_job_func();
+*/
 
 
 // Set up cron tasks to periodically ask people questions
@@ -297,22 +310,25 @@ cronFunc = function(){
     (function(group){
 
       // Get the list of people in the channel right now
-      projects.members(group.channel, function(err, members){
+      get_users_in_channel(group.channel, function(members){
 
-        for(var i in group.users) {
-          (function(user){
+        for(var nick in members) {
+          (function(nick){
 
-            console.log("Checking " + user.username);
+            var username = config.username_from_nick(nick);
 
-            // Set the date relative to the timezone of the user's last location.
-            // Fall back to Los Angeles timezone if not known.
-            var timezone = group.timezone;
+            if(username == false)
+              return;
 
-            if(user.geoloqi_user_id && user_locations[user.geoloqi_user_id] && user_locations[user.geoloqi_user_id].context && user_locations[user.geoloqi_user_id].context.timezone) {
-              timezone = user_locations[user.geoloqi_user_id].context.timezone;
-            }
+            if(nick.match(/\|away/))
+              return;
 
-            currentTime.setTimezone(timezone);
+            var user = config.user(username);
+
+            console.log("Checking nick " + nick + " ("+user.username+")");
+
+            // Set the date relative to the timezone of the group
+            currentTime.setTimezone(group.timezone);
 
             // Check if we should ask this person.
             // Based on 
@@ -332,25 +348,18 @@ cronFunc = function(){
 
                   if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
                     if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
-
-                      if( members.indexOf(user.username) != -1 ) {
-                        console.log("  " + user.username + " is online!");
-
-                        if( lastasked == null && lastreplied == null ) {
-                          // First time this user is in the system. Bail out some portion 
-                          // of the time to stagger the first questions to everyone.
-                          if( Math.random() < 0.4 ) {
-                            return;
-                          }
+                      if( lastasked == null && lastreplied == null ) {
+                        // First time this user is in the system. Bail out some portion 
+                        // of the time to stagger the first questions to everyone.
+                        if( Math.random() < 0.3 ) {
+                          return;
                         }
-
-                        console.log("  asking " + user.username + " on " + group.channel + " now!");
-                        projects.get_nick(group.channel, user.username, function(err, current_nick){
-                          projects.ask_past(group.channel, user.username, (current_nick ? current_nick : user.username));
-                        });
-
                       }
 
+                      console.log("  asking " + user.username + " on " + group.channel + " now!");
+                      projects.get_nick(group.channel, user.username, function(err, current_nick){
+                        projects.ask_past(group.channel, user.username, (current_nick ? current_nick : user.username));
+                      });
                     }
                   }
                 });
@@ -366,7 +375,7 @@ cronFunc = function(){
             }
             */
 
-          })(group.users[i]);
+          })(nick);
 
         }
 
@@ -377,7 +386,6 @@ cronFunc = function(){
 };
 
 new cron('*/5 * * * *', cronFunc, null, true, "America/Los_Angeles");
-
 cronFunc();
 
 
