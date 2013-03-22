@@ -1,3 +1,5 @@
+process.chdir(__dirname);
+
 var net = require('net'); 
 var dgram = require('dgram');
 var api = require('zenircbot-api');
@@ -5,8 +7,8 @@ var projectStatus = require('./project-status.js');
 var cron = require('cron').CronJob;
 var time = require('time');
 
-var bot_config = api.load_config('../bot.json');
-var config = api.load_config('./projects/config.json');
+var bot_config = api.load_config('../../bot.json');
+var config = api.load_config('./config.json');
 var zen = new api.ZenIRCBot(bot_config.redis.host,
                             bot_config.redis.port,
                             bot_config.redis.db);
@@ -157,34 +159,27 @@ sub.on('message', function(channel, message) {
         type: false
       };
 
-      if(match=msg.data.message.match(/^done! (.+)/)) {
+      if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
         console.log(username + " did something: " + match[1]);
 
         done.message = match[1];
         done.type = "past";
 
-      } else if(match=msg.data.message.match(/^!done (.+)/)) {
-        console.log(username + " did something: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "past";
-
-      } else if(match=msg.data.message.match(/^!todo (.+)/)) {
+      } else if((match=msg.data.message.match(/^todo! (.+)/)) || (match=msg.data.message.match(/^!todo (.+)/))) {
         console.log(username + " will do: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "future";
 
-      } else if(match=msg.data.message.match(/^!block(?:ing)? (.+)/)) {
+      } else if((match=msg.data.message.match(/^!block(?:ing|ed)? (.+)/)) || (match=msg.data.message.match(/^block(?:ing|ed)?! (.+)/))) {
         console.log(username + " is blocked on: " + match[1]);
 
         // Record their reply
         done.message = match[1];
         done.type = "blocking";
 
-      } else if(match=msg.data.message.match(/^!hero (.+)/)) {
+      } else if((match=msg.data.message.match(/^!hero (.+)/)) || (match=msg.data.message.match(/^hero! (.+)/))) {
         console.log(username + "'s hero: " + match[1]);
 
         // Record their reply
@@ -233,7 +228,7 @@ sub.on('message', function(channel, message) {
             projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
           }
         });
-      } else if(match=msg.data.message.match(/!undone (.+)/)) {
+      } else if((match=msg.data.message.match(/!undone (.+)/)) || (match=msg.data.message.match(/undone! (.+)/))) {
         console.log(username + " undid something: " + match[1]);
 
         projects.remove_response(username, match[1], msg.data.sender, msg.data.channel);
