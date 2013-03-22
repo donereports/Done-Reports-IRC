@@ -16,6 +16,58 @@ The goal is to collect enough information from people to send daily updates to e
 
 
 
+IRC
+===
+
+### Commands
+
+#### `!done A short sentence about the thing you did`
+
+Use this command to send an update about what you did.
+
+Alternate commands:
+
+* `done! I did this`
+
+#### `!todo I'm going to do this tomorrow`
+
+Take quick notes on what you're going to do tomorrow. Everyone will see this in the email that goes out,
+and you'll be reminded tomorrow when you read it.
+
+Alternate commands:
+
+* `todo! I'm going to do this tomorrow`
+
+#### `!blocking I'm blocked on this thing`
+
+If you're frustrated by something or something is preventing you from getting
+things done, use the `!blocking` command to let people know! You never know, someone
+may be able to help resolve whatever you're stuck on!
+
+Alternate commands:
+
+* `blocking!`
+* `!block`
+* `!blocked`
+* `block!`
+* `blocked!`
+
+#### `!hero Loqi because he makes my life easier`
+
+Use this to thank people for something they did!
+
+Alternate commands:
+
+* `hero! Loqi for being awesome`
+
+#### `!addhook https://github.com/user/repo #channel`
+
+Use this command to add the appropriate Github hook to a repo. You can send
+this message as a PM to the IRC bot so you don't need to clutter the channel
+with it if you're using it for a bunch of repos in a row. 
+
+
+
 API
 ===
 
