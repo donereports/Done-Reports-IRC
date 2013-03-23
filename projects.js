@@ -130,17 +130,18 @@ sub.subscribe('in');
 sub.on('message', function(channel, message) {
   console.log(message);
   var msg = JSON.parse(message);
-  var sender = msg.data.sender;
-  if(msg.version == 1) {
 
-    if(msg.type == "names") {
-      // Run any pending callbacks with the list of nicks
-      for(var i in pendingNamesCallbacks) {
-        pendingNamesCallbacks[i](msg.data.nicks);
-      }
-      pendingNamesCallbacks = [];
-      return;
+  if(msg.type == "names") {
+    // Run any pending callbacks with the list of nicks
+    for(var i in pendingNamesCallbacks) {
+      pendingNamesCallbacks[i](msg.data.nicks);
     }
+    pendingNamesCallbacks = [];
+    return;
+  }
+
+  var sender = msg.data.sender;
+  if(msg.version == 1 && msg.type == "privmsg") {
 
     var username = config.username_from_nick(msg.data.sender);
     console.log("Username: "+username+" ("+msg.data.sender+")");
@@ -279,8 +280,6 @@ sub.on('message', function(channel, message) {
     }
 
     if(msg.type == "privmsg_action") {
-      console.log(msg);
-
 
     }
   }
