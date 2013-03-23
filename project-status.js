@@ -263,6 +263,7 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
     });
   } catch(e) {
     console.log('[api] EXCEPTION!');
+    console.log(e);
     callback({
       error: 'exception',
       error_description: 'An unknown error occurred'
@@ -316,6 +317,7 @@ ProjectStatus.prototype.load_users = function(channel, callback) {
     });
   } catch(e) {
     console.log('[api] EXCEPTION!');
+    console.log(e);
     callback({
       error: 'exception',
       error_description: 'An unknown error occurred'

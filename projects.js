@@ -332,8 +332,6 @@ cron_func = function(){
               return;
             }
 
-            console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
-
             // Set the date relative to the timezone of the group
             currentTime.setTimezone(group.timezone);
 
@@ -346,6 +344,7 @@ cron_func = function(){
 
             // Only ask what you're working on during normal hours
             if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
+              console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
               projects.get_lastasked("past", user.username, function(err, lastasked){
                 projects.get_lastreplied("past", user.username, function(err, lastreplied){
@@ -360,6 +359,7 @@ cron_func = function(){
                         // First time this user is in the system. Bail out some portion 
                         // of the time to stagger the first questions to everyone.
                         if( Math.random() < 0.3 ) {
+                          console.log("  skipping 30% of the time");
                           return;
                         }
                       }
