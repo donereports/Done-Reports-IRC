@@ -1,6 +1,10 @@
 class Controller < Sinatra::Base
 
   def load_group(token)
+    if token == "" or token == nil
+      halt json_error(200, {:error => 'token_required', :error_description => 'Must provide a token'})
+    end
+
     group = Group.first :token => token
 
     if group.nil?
@@ -160,11 +164,35 @@ class Controller < Sinatra::Base
       :result => 'success',
       :status => status,
       :username => user.username,
-      :user_id => user.id
     })
   end
 
-  # Returns a JSON config block for the group to be put into the IRC bot config file
+  post '/api/user/deactivate' do
+    group = load_group params[:token]
+
+    user = User.first({
+      :account_id => group.account_id, 
+      :username => params[:username]
+    })
+
+    if user.nil?
+      json_error(200, {
+        :error => 'user_not_found',
+        :error_description => 'No user was found with the specified username'
+      })
+    else
+      user.active = false
+      user.save
+    end
+
+    json_response(200, {
+      :result => 'success',
+      :status => 'deactivated',
+      :username => user.username
+    })
+  end
+
+  # Returns a JSON config block for the group to be loaded into the IRC bot config
   get '/api/group/config' do
     group = load_group params[:token]
 
