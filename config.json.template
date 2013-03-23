@@ -1,58 +1,18 @@
 {
-  "channel": "#zenloqi",
-  "submit_api": {
-    "host": "status-report.geoloqi.com",
-    "port": 80,
-    "token": "12345678901234567890123456789012"
-  },
-  "users": [
+  "groups": [
     {
-      "username":"aaronpk", 
-      "token":"", 
-      "geoloqi_user_id":"Gf",
-      "nicks": []
+      "channel": "#portland",
+      "api": {
+        "url": "http://127.0.0.1:9393",
+        "token": "12345678901234567890123456789012"
+      }
     },
     {
-      "username":"caseorganic", 
-      "token":"", 
-      "geoloqi_user_id":"2",
-      "nicks": ["case", "caseorgani", "caseorgan"]
-    },
-    {
-      "username":"kenichi", 
-      "token":"", 
-      "geoloqi_user_id":"4ab",
-      "nicks": []
-    },
-    {
-      "username":"kyledrake", 
-      "token":"", 
-      "geoloqi_user_id":"13K",
-      "nicks": ["kyle"]
-    },
-    {
-      "username":"patrickarlt", 
-      "token":"", 
-      "geoloqi_user_id":"bo",
-      "nicks": []
-    },
-    {
-      "username":"joshy", 
-      "token":"", 
-      "geoloqi_user_id":"Sx",
-      "nicks": ["josh"]
-    },
-    {
-      "username":"jerrysv", 
-      "token":"", 
-      "geoloqi_user_id":"den",
-      "nicks": []
-    },
-    {
-      "username":"robinj", 
-      "token":"", 
-      "geoloqi_user_id":"DDC",
-      "nicks": ["robin","robinjones"]
+      "channel": "#dc",
+      "api": {
+        "url": "http://127.0.0.1:9393",
+        "token": "09876543210987654321098765432109"
+      }
     }
   ]
 }
