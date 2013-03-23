@@ -1,6 +1,5 @@
 var querystring = require('querystring');
-var https = require('https');
-var http = require('http');
+var request = require('request');
 
 function now() {
   return parseInt( (new Date()).getTime() / 1000 );
@@ -193,6 +192,7 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
         self.zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
       } else {
         self.zen.send_privmsg(channel, "Something went wrong trying to store your entry!");
+        console.log(response);
       }
     }
   });
@@ -225,62 +225,42 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
   var self = this;
 
   var group = self.config.group_for_channel(channel);
+  if(group == false) {
+    return false;
+  }
+
   var user = self.config.user(username);
 
   try {
-    var req = http.request({
-      host: group.submit_api.host,
-      port: group.submit_api.port,
-      path: (type == "remove" ? "/api/report/remove" : "/api/report/new"),
-      method: "POST",
-      headers: {
-        'Host': group.submit_api.host
+    request({
+      url: group.api.url+'/api/report/'+(type == 'remove' ? 'remove' : 'new'),
+      method: 'post',
+      form: {
+        token: group.api.token,
+        username: username,
+        type: type,
+        message: message
       }
-    }, function(channelRes) {
-      channelRes.setEncoding('utf8');
-      
-      if(channelRes.statusCode != 200) {
-        console.log('[api] ' + channelRes.statusCode);
-        response = '';
-        channelRes.on('data', function (chunk) {
-          response += chunk;
+    }, function(error, response, body){
+      if(error) {
+        callback({
+          error: 'unknown'
         });
-        channelRes.on('end', function(){
-          console.log('[api] ERROR');
-          try {
-            errorInfo = JSON.parse(response);
-            console.log(errorInfo);
-          } catch(e) {
-            errorInfo = {
-              error: 'unknown'
-            }
-          }
-          callback(errorInfo);
+      } else if(response.statusCode != 200) {
+        callback({
+          error: 'unknown',
+          statusCode: response.statusCode
         });
       } else {
-        response = '';
-        channelRes.on('data', function (chunk) {
-          response += chunk;
-        });
-        channelRes.on('end', function(){
-          callback(JSON.parse(response));          
-        });
+        try {
+          callback(JSON.parse(body));
+        } catch(e) {
+          callback({
+            error: 'parse_error'            
+          });
+        }
       }
     });
-    req.write(querystring.stringify({
-      "token": group.submit_api.token,
-      "username": username,
-      "type": type,
-      "message": message
-    }));
-    req.addListener('error', function(socketException){
-      console.log('[api] Socket Error!');
-//      console.log(socketException);
-      callback({
-        error: 'socket_error'
-      });
-    });
-    req.end();
   } catch(e) {
     console.log('[api] EXCEPTION!');
     callback({
@@ -289,6 +269,59 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
     });
   }
 }
+
+ProjectStatus.prototype.load_users = function(channel, callback) {
+  var self = this;
+
+  var group = self.config.group_for_channel(channel);
+
+  if(group == false) {
+    return false;
+  }
+
+  try {
+    request({
+      url: group.api.url+'/api/group/config',
+      qs: {
+        token: group.api.token
+      }
+    }, function(error, response, body){
+      if(error) {
+        callback({
+          error: 'unknown'
+        });
+      } else if(response.statusCode != 200) {
+        callback({
+          error: 'unknown',
+          statusCode: response.statusCode
+        });
+      } else {
+        try {
+          var data = JSON.parse(body);
+          if(data.users) {
+            self.config.groups[self.config.group_index_for_channel(channel)].timezone = data.timezone
+            self.config.groups[self.config.group_index_for_channel(channel)].users = data.users
+            callback(data);
+          } else {
+            callback({
+              error: 'bad_api_response'
+            });
+          }
+        } catch(e) {
+          callback({
+            error: 'parse_error'            
+          });
+        }
+      }
+    });
+  } catch(e) {
+    console.log('[api] EXCEPTION!');
+    callback({
+      error: 'exception',
+      error_description: 'An unknown error occurred'
+    });
+  }
+};
 
 /*
 

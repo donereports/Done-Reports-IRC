@@ -59,14 +59,23 @@ config.group_for_user = function(username) {
   return false;
 }
 
-config.group_for_channel = function(channel) {
+config.group_index_for_channel = function(channel) {
   for(var i in this.groups) {
     var group = this.groups[i];
     if(group.channel.toLowerCase() == channel.toLowerCase()) {
-      return group;
+      return i;
     }
   }
   return false;
+}
+
+config.group_for_channel = function(channel) {
+  var index = config.group_index_for_channel(channel);
+  if(index) {
+    return this.groups[index];
+  } else {
+    return false;
+  }
 }
 
 // Given a nick, find the corresponding username by checking aliases defined in the config file
@@ -126,9 +135,7 @@ function get_users_in_channel(channel, callback) {
   }));
 }
 
-sub.subscribe('in');
-sub.on('message', function(channel, message) {
-  console.log(message);
+function on_message_received(channel, message) {
   var msg = JSON.parse(message);
 
   if(msg.type == "names") {
@@ -145,6 +152,7 @@ sub.on('message', function(channel, message) {
 
     var username = config.username_from_nick(msg.data.sender);
     console.log("Username: "+username+" ("+msg.data.sender+")");
+    console.log(message);
 
     // Reject users that are not in the config file
     if(username == false) {
@@ -186,13 +194,8 @@ sub.on('message', function(channel, message) {
         type: false
       };
 
-      if(msg.data.message == "!who") {
-        projects.members(group.channel, function(err, members){
-          console.log(members);
-        });
-      }
-      if(msg.data.message == "!ask") {
-        cronFunc();
+      if(msg.data.message == "!reload users") {
+        load_users();
       }
 
       if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
@@ -283,7 +286,7 @@ sub.on('message', function(channel, message) {
 
     }
   }
-});
+}
 
 
 // Update everyone's timezone and location data periodically
@@ -301,7 +304,7 @@ location_cron_job_func();
 
 
 // Set up cron tasks to periodically ask people questions
-cronFunc = function(){
+cron_func = function(){
 
   var currentTime = new time.Date();
 
@@ -324,7 +327,12 @@ cronFunc = function(){
 
             var user = config.user(username);
 
-            console.log("Checking nick " + nick + " ("+user.username+")");
+            // Only ask users in their home channel
+            if(config.group_for_user(username).channel != group.channel) {
+              return;
+            }
+
+            console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
             // Set the date relative to the timezone of the group
             currentTime.setTimezone(group.timezone);
@@ -337,10 +345,11 @@ cronFunc = function(){
             //  4) when they are at their computer (last time they spoke in IRC)
 
             // Only ask what you're working on during normal hours
-            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 17) {
+            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
 
               projects.get_lastasked("past", user.username, function(err, lastasked){
                 projects.get_lastreplied("past", user.username, function(err, lastreplied){
+                  console.log("  "+group.channel);
                   console.log("  Last asked " + user.username + " on " + lastasked);
                   console.log("  Last got a reply from " + user.username + " on " + lastreplied);
                   console.log(members);
@@ -384,13 +393,37 @@ cronFunc = function(){
 
 };
 
-new cron('*/5 * * * *', cronFunc, null, true, "America/Los_Angeles");
-cronFunc();
-
-
+function load_users() {
+  // For each group, load the user list from the API
+  for(var i in config.groups) {
+    (function(index){
+      // load_users sets values in the config hash in memory
+      projects.load_users(config.groups[index].channel, function(data){
+        console.log("Loaded Users for "+data.channel);
+        console.log(config.groups[index]);
+      });
+    })(i);
+  }
+}
 
 process.on('uncaughtException', function(err) {
   console.log("!!!!!!!!!!!!!!!")
   console.log(err);
 });
+
+
+load_users();
+
+// Start the listeners and cron job now, loading the user list will take a second
+// so there's a delay on the initial cron function run to let it load first.
+
+sub.subscribe('in');
+sub.on('message', on_message_received);
+
+// Set a cron job to ask users what they are doing periodically
+new cron('*/5 * * * *', cron_func, null, true, "America/Los_Angeles");
+setTimeout(cron_func, 3000); // Set a delay so the API calls have time to finish first
+
+// Reload the user list every night
+new cron('0 * * * *', load_users, null, true, "America/Los_Angeles");
 
