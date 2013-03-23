@@ -121,7 +121,9 @@ This endpoint handles Github's event hooks. Note this is different from the stan
 Add the appropriate Github hook to the specified repository. Will fail if the repo is not a Github URL.
 
 
-### `GET /api/group_config/:token`
+### `GET /api/group/config`
+
+* token - The auth token for the group
 
 Returns a JSON config block for the group to be put into the IRC bot config file.
 

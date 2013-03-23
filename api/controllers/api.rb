@@ -17,6 +17,10 @@ class Controller < Sinatra::Base
       halt json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{username}\"", :error_username => username})
     end
 
+    if user.active == false
+      halt json_error(200, {:error => 'user_disabled', :error_description => "The user account for \"#{username}\" is disabled", :error_username => username})
+    end
+
     user
   end
 
@@ -161,21 +165,16 @@ class Controller < Sinatra::Base
   end
 
   # Returns a JSON config block for the group to be put into the IRC bot config file
-  get '/api/group_config/:token' do
+  get '/api/group/config' do
     group = load_group params[:token]
 
     data = {
       channel: group.irc_channel,
       timezone: group.due_timezone,
-      submit_api: {
-        host: "",
-        port: 80,
-        token: group.token
-      },
       users: []
     }
 
-    group.users.each do |user|
+    group.users(:active => 1).each do |user|
       user_info = {
         username: user.username,
         nicks: (user.nicks ? user.nicks.split(',') : [])
