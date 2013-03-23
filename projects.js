@@ -123,11 +123,11 @@ function is_explicit_command(m) {
   }
 }
 
-var pendingNamesCallbacks = [];
+var pendingNamesCallbacks = {};
 
 // Kick off a "NAMES" command, which will cause an event on the `sub` object to be triggered
 function get_users_in_channel(channel, callback) {
-  pendingNamesCallbacks.push(callback);
+  pendingNamesCallbacks[channel] = callback;
   redis.publish('out', JSON.stringify({
     version: 1,
     type: 'raw',
@@ -140,10 +140,10 @@ function on_message_received(channel, message) {
 
   if(msg.type == "names") {
     // Run any pending callbacks with the list of nicks
-    for(var i in pendingNamesCallbacks) {
-      pendingNamesCallbacks[i](msg.data.nicks);
+    if(typeof pendingNamesCallbacks[msg.data.channel] == 'function') {
+      pendingNamesCallbacks[msg.data.channel](msg.data.nicks);
+      pendingNamesCallbacks[msg.data.channel] = null;
     }
-    pendingNamesCallbacks = [];
     return;
   }
 
@@ -313,6 +313,8 @@ cron_func = function(){
 
       // Get the list of people in the channel right now
       get_users_in_channel(group.channel, function(members){
+        console.log("Found users for channel "+group.channel);
+        console.log(members);
 
         for(var nick in members) {
           (function(nick){
