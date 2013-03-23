@@ -177,8 +177,6 @@ function on_message_received(channel, message) {
     if(group == false) {
       if(msg.data.message && is_explicit_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
-      } else {
-        console.log("No group for channel");
       }
       return;
     }
@@ -196,6 +194,30 @@ function on_message_received(channel, message) {
 
       if(msg.data.message == "!reload users") {
         load_users();
+        return;
+      }
+
+      if(match=msg.data.message.match(/^!addhook (.+)/)) {
+        console.log("Adding Github hook");
+        console.log("["+match[1]+"]");
+        if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/\.]+$/)) {
+          projects.add_github_hook(msg.data.channel, match[1], function(data){
+            if(data.error) {
+              zen.send_privmsg(msg.data.channel, "There was an error saving the Github hook! " + data.error + ": " + data.error_description);
+            } else if(data.repo) {
+              if(data.added) {
+                zen.send_privmsg(msg.data.channel, "Successfully added the hook!");
+              } else {
+                zen.send_privmsg(msg.data.channel, "The hook already was set for this repo.");
+              }
+            } else {
+              zen.send_privmsg(msg.data.channel, "There was an unknown error saving the Github hook!");
+            }
+          });
+        } else {
+          zen.send_privmsg(msg.data.channel, "Wrong URL format, try something like https://github.com/username/repo");
+        }
+        return;
       }
 
       if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
@@ -401,7 +423,7 @@ function load_users() {
     (function(index){
       // load_users sets values in the config hash in memory
       projects.load_users(config.groups[index].channel, function(data){
-        console.log("Loaded Users for "+data.channel);
+        console.log("Loaded Users for "+config.groups[index].channel);
         console.log(config.groups[index]);
       });
     })(i);

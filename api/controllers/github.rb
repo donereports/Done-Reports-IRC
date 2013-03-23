@@ -23,16 +23,23 @@ class Controller < Sinatra::Base
     # Check for existing hooks
     hook_url = GithubHelper.hook_url(group.github_token)
 
-    json = RestClient.get hooks_url, :authorization => "Bearer #{group.github_access_token}"
-    hooks = JSON.parse json
-    if hooks.select{|h| h['config']['url'] == hook_url}.length == 0
-      # Add the new hook
-      response = RestClient.post hooks_url, GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
-      puts "Added hook to #{repo}"
-      puts response
-      added = true
-    else
-      added = false
+    begin
+      json = RestClient.get hooks_url, :authorization => "Bearer #{group.github_access_token}"
+      hooks = JSON.parse json
+      if hooks.select{|h| h['config']['url'] == hook_url}.length == 0
+        # Add the new hook
+        response = RestClient.post hooks_url, GithubHelper.hook_payload(group.github_token).to_json, :authorization => "Bearer #{group.github_access_token}"
+        puts "Added hook to #{repo}"
+        puts response
+        added = true
+      else
+        added = false
+      end
+    rescue
+      return json_error(200, {
+        error: 'github_error',
+        error_description: "There was an error saving the Github hook. Make sure the linked Github account has permission to access this repository"
+      })
     end
 
     json_response(200, {

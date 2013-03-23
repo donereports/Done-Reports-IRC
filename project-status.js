@@ -325,6 +325,54 @@ ProjectStatus.prototype.load_users = function(channel, callback) {
   }
 };
 
+ProjectStatus.prototype.add_github_hook = function(channel, repo_url, callback) {
+  var self = this;
+
+  var group = self.config.group_for_channel(channel);
+
+  if(group == false) {
+    return false;
+  }
+
+  try {
+    request({
+      url: group.api.url+'/api/github_hook/add',
+      method: 'post',
+      form: {
+        token: group.api.token,
+        repo_url: repo_url
+      }
+    }, function(error, response, body){
+      if(error) {
+        callback({
+          error: 'unknown'
+        });
+      } else {
+        try {
+          var data = JSON.parse(body);
+          if(data.error) {
+            console.log("Error saving Github hook: " + data.error);
+            callback(data);
+          } else {
+            callback(data);
+          }
+        } catch(e) {
+          callback({
+            error: 'parse_error'            
+          });
+        }
+      }
+    });
+  } catch(e) {
+    console.log('[api] EXCEPTION!');
+    console.log(e);
+    callback({
+      error: 'exception',
+      error_description: 'An unknown error occurred'
+    });
+  }
+};
+
 /*
 
 ProjectStatus.prototype.fetch_user_locations = function(callback) {
