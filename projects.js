@@ -388,10 +388,8 @@ cron_func = function(){
                         }
                       }
 
-                      console.log("  asking " + user.username + " on " + group.channel + " now!");
-                      projects.get_nick(group.channel, user.username, function(err, current_nick){
-                        projects.ask_past(group.channel, user.username, (current_nick ? current_nick : user.username));
-                      });
+                      console.log("  asking " + nick + "(" + user.username + ") on " + group.channel + " now!");
+                      projects.ask_past(group.channel, user.username, nick);
                     }
                   }
                 });
