@@ -11,3 +11,10 @@ This report was sent on <%= report_localtime.strftime('%A, %B %-d, %Y at %I:%M%P
   <% end %>
 <% end %>
 <% end %>
+
+<% if quotes.count > 0 %>
+  quotes
+  <% quotes.each do |quote| %>
+   * <%= quote.message %> (via <%= quote.user.username %>)
+  <% end %>
+<% end %>

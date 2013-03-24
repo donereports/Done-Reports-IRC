@@ -247,6 +247,13 @@ function on_message_received(channel, message) {
         done.message = match[1];
         done.type = "hero";
 
+      } else if((match=msg.data.message.match(/^!quote (.+)/)) || (match=msg.data.message.match(/^quote! (.+)/))) {
+        console.log(username + " quoted: " + match[1]);
+
+        // Record their reply
+        done.message = match[1];
+        done.type = "quote";
+
       } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 

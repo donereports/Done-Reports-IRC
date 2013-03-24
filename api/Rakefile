@@ -188,7 +188,8 @@ namespace :report do
       :group => nil,
       :report => nil,
       :report_localtime => nil,
-      :users => []
+      :users => [],
+      :quotes => []
     }
 
     puts "  Group '#{group.name}'"
@@ -262,7 +263,12 @@ namespace :report do
         end
       end
 
-      if email_data[:users].count > 0
+      quotes = report.entries.all(:type => 'quote')
+      if quotes.count > 0
+        email_data[:quotes] = quotes
+      end
+
+      if email_data[:users].count + email_data[:quotes].count > 0
 
         # Merge the data with the email template in email.erb
         puts "------"

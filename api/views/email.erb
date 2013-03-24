@@ -21,3 +21,12 @@
   <% end %>
 
 <% end %>
+
+<% if quotes.count > 0 %>
+  <h3 style="font-size: 18pt; color: #e37b2f; font-weight: bold;">quotes</h3>
+  <ul>
+  <% quotes.each do |quote| %>
+    <li><%= quote.message %> <span style="font-size: 80%; color: #777;">(via <%= quote.user.username %>)</span></li>
+  <% end %>
+  </ul>
+<% end %>
