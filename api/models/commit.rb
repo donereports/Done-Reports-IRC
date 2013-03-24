@@ -28,3 +28,22 @@ class Commit
   end
 
 end
+
+class DummyCommit
+  attr_accessor :repo
+  attr_accessor :text
+  attr_accessor :link
+
+  def self.create(opts)
+    commit = DummyCommit.new
+    commit.repo = opts[:repo]
+    commit.text = opts[:text]
+    commit.link = opts[:link]
+    commit
+  end
+
+  def irc_message
+    prefix = @repo.link.gsub(/^https?:\/\//, '')
+    return "[#{prefix}] #{@text} #{@link}"
+  end
+end

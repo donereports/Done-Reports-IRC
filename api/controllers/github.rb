@@ -289,14 +289,32 @@ class Controller < Sinatra::Base
         text: "#{username} open sourced the repository!"
       })
     when "pull_request"
-      Commit.create({
+      details = []
+      details << "#{payload["pull_request"]["commits"]} commits" if payload["pull_request"]["commits"] > 0
+      details << "#{payload["pull_request"]["changed_files"]} changed files" if payload["pull_request"]["changed_files"] > 0
+      details_str = ""
+      if details.count > 0
+        details_str = " (#{details.join(', ')})"
+      end
+
+      events = []
+      events << Commit.create({
         type: type,
         repo: repo,
         user: user,
         date: now,
-        text: "#{username} #{payload["action"]} pull request #{payload["number"]}",
+        text: "#{username} #{payload["action"]} pull request ##{payload["number"]}#{details_str}",
         link: payload["pull_request"]["html_url"]
       })
+      if payload["mergeable"] == false
+        events << DummyCommit.create({
+          repo: repo,
+          text: "Pull request ##{payload["pull_request"]["number"]} cannot be safely merged!",
+          link: payload["pull_request"]["html_url"]
+        })
+      end
+      events
+
     when "pull_request_review_comment"
       summary = Sanitize.clean(payload["comment"]["body"])[0..140]
       Commit.create({
