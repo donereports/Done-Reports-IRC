@@ -116,7 +116,7 @@ function now() {
 }
 
 function is_explicit_command(m) {
-  if(m.match(/^!(done|todo|block|hero|undone) .+/) || m.match(/^(done|todo|block|hero|undone)! .+/)) {
+  if(m.match(/^!(done|todo|block|hero|undone|quote|addhook) .+/) || m.match(/^(done|todo|block|hero|undone|quote)! .+/)) {
     return true;
   } else {
     return false;
@@ -133,6 +133,23 @@ function get_users_in_channel(channel, callback) {
     type: 'raw',
     command: "NAMES "+channel
   }));
+}
+
+function add_hook(repo_url, channel, cmd_channel) {
+  console.log("Adding hook for "+channel+" to "+repo_url);
+  projects.add_github_hook(channel, repo_url, function(data){
+    if(data.error) {
+      zen.send_privmsg(cmd_channel, "There was an error saving the Github hook! " + data.error + ": " + data.error_description);
+    } else if(data.repo) {
+      if(data.added) {
+        zen.send_privmsg(cmd_channel, "Successfully added the hook for "+repo_url+"!");
+      } else {
+        zen.send_privmsg(cmd_channel, "The hook already was set for "+repo_url);
+      }
+    } else {
+      zen.send_privmsg(cmd_channel, "There was an unknown error saving the Github hook!");
+    }
+  });
 }
 
 function on_message_received(channel, message) {
@@ -163,6 +180,20 @@ function on_message_received(channel, message) {
     }
 
     if(typeof msg.data.channel == 'undefined' || msg.data.channel.substring(0,1) != "#") {
+      // Catch PMs for !addhook commands
+      if(msg.data.message.match(/^!addhook (.+)/)) {
+        if(match=msg.data.message.match(/^!addhook (https?:\/\/github.com\/[^\/]+\/[^\/\.]+) (#[a-z]+)/)) {
+          // Check if channel is one we know about in the config file
+          var group = config.group_for_channel(match[2]);
+          if(group == false) { 
+            zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+match[2]);
+          } else {
+            add_hook(match[1], match[2], msg.data.channel);
+          }
+        } else {
+          zen.send_privmsg(msg.data.channel, "Sorry, I didn't get that. Try '!addhook https://github.com/user/repo #channel'");
+        }
+      }
       return;
     }
 
@@ -182,7 +213,7 @@ function on_message_received(channel, message) {
     }
 
     if(msg.type == "privmsg") {
-
+      console.log("privmsg");
       console.log(msg);
 
       projects.spoke(msg.data.channel, username, msg.data.sender);
@@ -201,19 +232,7 @@ function on_message_received(channel, message) {
         console.log("Adding Github hook");
         console.log("["+match[1]+"]");
         if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/\.]+$/)) {
-          projects.add_github_hook(msg.data.channel, match[1], function(data){
-            if(data.error) {
-              zen.send_privmsg(msg.data.channel, "There was an error saving the Github hook! " + data.error + ": " + data.error_description);
-            } else if(data.repo) {
-              if(data.added) {
-                zen.send_privmsg(msg.data.channel, "Successfully added the hook!");
-              } else {
-                zen.send_privmsg(msg.data.channel, "The hook already was set for this repo.");
-              }
-            } else {
-              zen.send_privmsg(msg.data.channel, "There was an unknown error saving the Github hook!");
-            }
-          });
+          add_hook(match[1], msg.data.channel, msg.data.channel);
         } else {
           zen.send_privmsg(msg.data.channel, "Wrong URL format, try something like https://github.com/username/repo");
         }

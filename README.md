@@ -66,6 +66,7 @@ Use this command to add the appropriate Github hook to a repo. You can send
 this message as a PM to the IRC bot so you don't need to clutter the channel
 with it if you're using it for a bunch of repos in a row. 
 
+If you send this command in a channel, don't include the #channel on the end.
 
 
 API
