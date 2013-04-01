@@ -1,129 +1,64 @@
 class Controller < Sinatra::Base
 
-  def load_group(token)
+  def validate_access_token(token)
     if token == "" or token == nil
-      halt json_error(200, {:error => 'token_required', :error_description => 'Must provide a token'})
+      halt json_error(200, {:error => 'access_token_required', :error_description => 'Must provide a token'})
     end
 
-    group = Group.first :token => token
-
-    if group.nil?
-      halt json_error(200, {:error => 'group_not_found', :error_description => 'No group found for the token provided'})
+    begin
+      tokenInfo = JWT.decode(token, SiteConfig.token_secret)
+    rescue
+      halt json_error(200, {:error => 'invalid_token', :error_description => 'The token provided could not be validated'})
     end
 
-    group
-  end
-
-  def load_user(username, group)
-    user = User.first :account_id => group.account_id, :username => username
+    user = User.first :id => tokenInfo[:user_id], :active => 1
 
     if user.nil?
-      halt json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{username}\"", :error_username => username})
-    end
-
-    if user.active == false
-      halt json_error(200, {:error => 'user_disabled', :error_description => "The user account for \"#{username}\" is disabled", :error_username => username})
+      halt json_error(200, {:error => 'user_not_found', :error_description => 'The user account is not active'})
     end
 
     user
   end
 
-=begin
-  `POST /api/report/new`
-
-  * token - The token corresponding to the group
-  * user data - The user sending the report
-  *   - username
-  *   - email
-  *   - github_email
-  *   - github_username
-  * type - past, future, blocking, hero, unknown
-  * message - The text of the report
-
-  Post a new report. Automatically associated with the current open report for the group.
-=end
-  post '/api/report/new' do
-    group = load_group params[:token]
-
-    user = load_user params[:username], group
-
-    # user = User.first_or_create({
-    #   :account_id => group.account_id, 
-    #   :username => params[:username]
-    # }, {
-    #   :email => params[:email],
-    #   :github_username => params[:github_username],
-    #   :github_email => params[:github_email],
-    #   :gitlab_email => params[:gitlab_email],
-    #   :gitlab_username => params[:gitlab_username],
-    #   :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
-    #   :created_at => Time.now
-    # })
-
-    report = Report.current_report(group)
-
-    entry = report.create_entry :user => user, :type => params[:type], :message => params[:message]
-
-    if entry.id
-      json_response 200, {
-        :group => {
-          :name => group.name
-        }, 
-        :report => {
-          :report_id => report.id, 
-          :date_started => report.date_started
-        },
-        :entry => {
-          :entry_id => entry.id,
-          :username => entry.user.username,
-          :date => entry.date,
-          :type => entry.type,
-          :message => entry.message
-        }
+  get '/auth/github' do
+    if params[:code]
+      result = RestClient.post "https://github.com/login/oauth/access_token", {
+        :client_id => SiteConfig.github_id,
+        :client_secret => SiteConfig.github_secret,
+        :code => params[:code]
+      }, {
+        :accept => :json
       }
-    else
-      json_error 200, {
-        :error => 'unknown_error',
-        :error_description => 'There was a problem saving the entry'
-      }
-    end
-  end
 
+      accessToken = JSON.parse(result)["access_token"]
+      userInfo = JSON.parse(RestClient.get "https://api.github.com/user", {:params => {:access_token => accessToken}})
 
-=begin
-  `POST /api/report/remove`
+      # Find the user by their Github login (Github accounts can only belong to a single user across all Done accounts)
+      puts userInfo['login'].inspect
+      user = User.first :github_username => userInfo['login']
 
-  * token - The token corresponding to the group
-  * username - The username sending the report
-  * message - The text of the report
+      if user.nil?
+        halt json_error(200, {:error => 'user_not_found'})
+      end
 
-  Remove a report. Only entries from an open report can be removed.
-=end
-  post '/api/report/remove' do
-    group = load_group params[:token]
+      token = JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
 
-    user = load_user params[:username], group
-
-    report = Report.current_report(group)
-
-    entry = Entry.first :report => report, :user => user, :message => params[:message]
-
-    if entry 
-      entry.destroy
       json_response(200, {
-        :result => 'success',
-        :message => 'Entry was successfully deleted'
+        :username => user.username,
+        :token => token
       })
     else
-      json_error(200, {
-        :error => 'entry_not_found',
-        :error_description => 'No entry was found with the provided text'
-      })
+      redirect "https://github.com/login/oauth/authorize?client_id=#{SiteConfig.github_id}&state=#{SecureRandom.urlsafe_base64(20)}"
     end
   end
 
   post '/api/user/new' do
-    group = load_group params[:token]
+    auth_user = validate_access_token params[:access_token]
+    group = Group.first :irc_channel => params[:channel], :account => auth_user.account
+
+    if group.nil?
+      halt json_error(200, {:error => 'group_not_found', :error_description => 'The specified group was not found'})
+    end
 
     user = User.first({
       :account_id => group.account_id, 
@@ -190,27 +125,6 @@ class Controller < Sinatra::Base
       :status => 'deactivated',
       :username => user.username
     })
-  end
-
-  # Returns a JSON config block for the group to be loaded into the IRC bot config
-  get '/api/group/config' do
-    group = load_group params[:token]
-
-    data = {
-      channel: group.irc_channel,
-      timezone: group.due_timezone,
-      users: []
-    }
-
-    group.users(:active => 1).each do |user|
-      user_info = {
-        username: user.username,
-        nicks: (user.nicks ? user.nicks.split(',') : [])
-      }
-      data[:users] << user_info
-    end
-
-    json_response(200, data)
   end
 
 end

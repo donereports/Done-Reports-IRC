@@ -28,11 +28,14 @@ GEM
     hashie (1.2.0)
     i18n (0.6.1)
     json (1.7.5)
+    jwt (0.1.8)
+      multi_json (>= 1.5)
     mail (2.4.4)
       i18n (>= 0.4.0)
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
     mime-types (1.19)
+    multi_json (1.6.1)
     mysql2 (0.3.7)
     nokogiri (1.5.6)
     polyglot (0.3.3)
@@ -69,6 +72,7 @@ DEPENDENCIES
   erubis
   hashie
   json
+  jwt
   mysql2 (= 0.3.7)
   rake
   rest-client

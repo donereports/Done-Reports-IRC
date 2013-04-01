@@ -3,3 +3,6 @@ production:
   aws_key_id: ""
   aws_secret: ""
   base_url: "http://localhost:9393/"
+  token_secret: ""
+  github_id: ""
+  github_secret: ""
