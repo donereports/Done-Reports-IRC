@@ -36,7 +36,8 @@ class Controller < Sinatra::Base
     user
   end
 
-  def user_is_group_admin?(user, group)
+  def user_can_admin_group?(user, group)
+    return true if user.is_account_admin
     link = user.group_user.first(:group => group)
     return false if link.nil?
     return link.is_admin == true
@@ -68,12 +69,26 @@ class Controller < Sinatra::Base
       token = JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
 
       # TODO: If a redirect parameter is present, redirect to the site with the token in the URL instead
-      json_response(200, {
-        :username => user.username,
-        :token => token
-      })
+      if session[:state] != params[:state]
+        json_error(200, {
+          :error => 'invalid_state'
+        })
+      end
+
+      if session[:redirect]
+        uri = URI.parse session[:redirect]
+        uri.fragment = "username=#{user.username}&access_token=#{token}"
+        redirect uri.to_s
+      else
+        json_response(200, {
+          :username => user.username,
+          :token => token
+        })
+      end
     else
-      redirect "https://github.com/login/oauth/authorize?client_id=#{SiteConfig.github_id}&state=#{SecureRandom.urlsafe_base64(20)}"
+      session[:redirect] = params[:redirect] if params[:redirect]
+      session[:state] = SecureRandom.urlsafe_base64(20)
+      redirect "https://github.com/login/oauth/authorize?client_id=#{SiteConfig.github_id}&state=#{session[:state]}"
     end
   end
 
@@ -94,6 +109,82 @@ class Controller < Sinatra::Base
             :channel => group.irc_channel,
           }
         }
+      }
+    end
+
+    json_response(200, {
+      :users => users
+    })
+  end
+
+  # Get a list of all groups the authenticated user has access to
+  get '/api/groups' do
+    auth_user = validate_access_token params[:access_token]
+
+    groups = (auth_user.is_account_admin ? auth_user.account.groups : auth_user.groups).collect { |group|
+      zone = Timezone::Zone.new :zone => group.due_timezone
+      time = group.due_time.to_time.strftime("%l:%M%P").strip
+
+      {
+        :slug => group.slug,
+        :name => group.name,
+        :channel => group.irc_channel,
+        :timezone => group.due_timezone,
+        :time => time,
+        :members => group.users.length,
+        :is_admin => user_can_admin_group?(auth_user, group)
+      }
+    }
+
+    json_response(200, {
+      :groups => groups
+    })
+  end
+
+  get '/api/groups/:group' do
+    auth_user = validate_access_token params[:access_token]
+
+    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+
+    if group.nil?
+      halt json_error(200, {
+        :error => 'group_not_found', 
+        :error_description => 'The specified group was not found'
+      })
+    end
+
+    zone = Timezone::Zone.new :zone => group.due_timezone
+    time = group.due_time.to_time.strftime("%l:%M%P").strip
+
+    json_response(200, {
+      :slug => group.slug,
+      :name => group.name,
+      :channel => group.irc_channel,
+      :timezone => group.due_timezone,
+      :time => time,
+      :members => group.users.length,
+      :is_admin => user_can_admin_group?(auth_user, group)
+    })
+  end
+
+  get '/api/groups/:group/users' do
+    auth_user = validate_access_token params[:access_token]
+
+    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+
+    if group.nil?
+      halt json_error(200, {
+        :error => 'group_not_found', 
+        :error_description => 'The specified group was not found'
+      })
+    end
+
+    users = []
+    group.users.all(:active => true).each do |user|
+      users << {
+        :username => user.username,
+        :email => user.email,
+        :nicks => user.nicks
       }
     end
 
@@ -159,7 +250,7 @@ class Controller < Sinatra::Base
     # Find out if the authenticated user is an admin for any groups this user belongs to
     can_edit = false
     user.groups.each do |group|
-      can_edit = true if user_is_group_admin? auth_user, group
+      can_edit = true if user_can_admin_group? auth_user, group
     end
 
     if !can_edit
@@ -205,7 +296,7 @@ class Controller < Sinatra::Base
       })
     end
 
-    if !user_is_group_admin?(auth_user, group)
+    if !user_can_admin_group?(auth_user, group)
       halt json_error(200, {
         :error => 'forbidden', 
         :error_description => 'You are not an admin for this group'
@@ -243,7 +334,7 @@ class Controller < Sinatra::Base
     })
   end
 
-  post '/api/users/:username/groups/:channel/remove' do
+  post '/api/users/:username/groups/:group/remove' do
     auth_user = validate_access_token params[:access_token]
     group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
 
@@ -254,7 +345,7 @@ class Controller < Sinatra::Base
       })
     end
 
-    if !user_is_group_admin?(auth_user, group)
+    if !user_can_admin_group?(auth_user, group)
       halt json_error(200, {
         :error => 'forbidden', 
         :error_description => 'You are not an admin for this group'
@@ -303,7 +394,7 @@ class Controller < Sinatra::Base
     # Support adding this user directly to a group upon creation, optionally
     group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
 
-    if !user_is_group_admin?(auth_user, group)
+    if group && !user_can_admin_group?(auth_user, group)
       halt json_error(200, {
         :error => 'forbidden', 
         :error_description => 'You are not an admin for this group'
@@ -328,14 +419,6 @@ class Controller < Sinatra::Base
       status = 'created'
       user
     else
-      user.username = params[:username]
-      user.email = params[:email]
-      user.github_username = params[:github_username]
-      user.github_email = params[:github_email]
-      user.gitlab_email = params[:gitlab_email]
-      user.gitlab_username = params[:gitlab_username]
-      user.gitlab_user_id = params[:gitlab_user_id].to_i
-      user.nicks = params[:nicks]
       user.groups << group unless group.nil?
       user.save
       status = 'updated'
@@ -368,7 +451,7 @@ class Controller < Sinatra::Base
     # Find out if the authenticated user is an admin for any groups this user belongs to
     can_deactivate = false
     user.groups.each do |group|
-      can_deactivate = true if user_is_group_admin? auth_user, group
+      can_deactivate = true if user_can_admin_group? auth_user, group
     end
 
     if !can_deactivate

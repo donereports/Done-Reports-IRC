@@ -15,6 +15,7 @@ class User
   property :gitlab_user_id, Integer
   property :nicks, String, :length => 512
   property :active, Boolean, :default => true
+  property :is_account_admin, Boolean, :default => false
 
   property :created_at, DateTime
 end

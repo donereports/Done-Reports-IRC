@@ -18,6 +18,8 @@ class Controller < Sinatra::Base
     DataMapper.setup :default, SiteConfig.database_url
 
     set :public_folder, File.dirname(__FILE__) + '/public'
+    set :sessions, true
+    set :session_secret, "BLBLBLBLBLBLBLBLBLB"
   end
 end
 
