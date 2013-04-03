@@ -167,6 +167,59 @@ class Controller < Sinatra::Base
     })
   end
 
+  post '/api/groups' do
+    auth_user = validate_access_token params[:access_token]
+
+    if !auth_user.is_account_admin
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'Only account admins can do that'
+      })
+    end
+
+    if params[:channel].nil? || params[:channel] == ''
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Channel is required'
+      })
+    end
+
+    group = Group.first :irc_channel => "#{params[:channel]}", :account => auth_user.account
+
+    if !group.nil?
+      halt json_error(200, {
+        :error => 'already_exists',
+        :error_description => 'A group already exists for the specified channel'
+      })
+    end
+
+    group = Group.create({
+      account: auth_user.account,
+      irc_channel: "#{params[:channel]}",
+      token: SecureRandom.urlsafe_base64(32),
+      name: params[:name],
+      due_day: 'every',
+      due_time: DateTime.parse('2000-01-01 21:00:00'),
+      due_timezone: 'America/Los_Angeles',
+      send_reminder: 2,
+      github_token: SecureRandom.urlsafe_base64(12),
+      zenircbot_url: SiteConfig.zenircbot_url,
+      zenircbot_token: SiteConfig.zenircbot_token
+    })
+
+    zone = Timezone::Zone.new :zone => group.due_timezone
+    time = group.due_time.to_time.strftime("%l:%M%P").strip
+
+    json_response(200, {
+      :slug => group.slug,
+      :name => group.name,
+      :channel => group.irc_channel,
+      :timezone => group.due_timezone,
+      :time => time,
+      :is_admin => user_can_admin_group?(auth_user, group)
+    })
+  end
+
   get '/api/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
 

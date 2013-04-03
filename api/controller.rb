@@ -14,7 +14,7 @@ class Controller < Sinatra::Base
     return [code, {
         'Content-Type' => 'application/json;charset=UTF-8',
         'Cache-Control' => 'no-store',
-        'Access-Control-Allow-Origin' => '*'
+        'Access-Control-Allow-Origin' => '*',
       }, 
       response]
   end
@@ -29,7 +29,7 @@ class Controller < Sinatra::Base
     return [code, {
         'Content-Type' => 'application/json;charset=UTF-8',
         'Cache-Control' => 'no-store',
-        'Access-Control-Allow-Origin' => '*'
+        'Access-Control-Allow-Origin' => '*',
       }, 
       response]
   end
