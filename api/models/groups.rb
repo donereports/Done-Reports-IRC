@@ -5,7 +5,7 @@ class Group
   belongs_to :account
   # belongs_to :ircserver
   has n, :reports
-  has n, :users, :through => Resource
+  has n, :users, :through => :group_user
 
   property :token, String, :length => 128
   property :github_token, String, :length => 32
@@ -27,6 +27,10 @@ class Group
   property :gitlab_private_token, String, :length => 255
 
   property :created_at, DateTime
+
+  def slug
+    irc_channel.gsub(/^#/, '').downcase
+  end
 
   def send_irc_message(message)
     RestClient.post "#{zenircbot_url}channel/#{URI.encode_www_form_component irc_channel}", :message => message, :token => zenircbot_token
