@@ -404,8 +404,7 @@ cron_func = function(){
 
               projects.get_lastasked("past", user.username, function(err, lastasked){
                 projects.get_lastreplied("past", user.username, function(err, lastreplied){
-                  console.log("  "+group.channel);
-                  console.log("  Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
+                  console.log("  "+group.channel+" Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
                     + (now()-lastreplied) + " seconds ago");
 
                   if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
