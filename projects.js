@@ -87,13 +87,13 @@ config.username_from_nick = function(nick) {
     var user = users[i];
 
     if(user.username == username) {
-      console.log("'"+nick+"' matched username " + user.username);
+      // console.log("'"+nick+"' matched username " + user.username);
       return username;
     }
 
     for(var j in user.nicks) {
       if(user.nicks[j] == username) {
-        console.log("'"+nick+"' matched nick " + username);
+        // console.log("'"+nick+"' matched nick " + username);
         return user.username;
       }
     }
@@ -213,9 +213,6 @@ function on_message_received(channel, message) {
     }
 
     if(msg.type == "privmsg") {
-      console.log("privmsg");
-      console.log(msg);
-
       projects.spoke(msg.data.channel, username, msg.data.sender);
 
       var done = {
@@ -224,13 +221,23 @@ function on_message_received(channel, message) {
       };
 
       if(msg.data.message == "!reload users") {
+        console.log("Reloading users");
         load_users();
         return;
       }
 
+      if(match=msg.data.message.match(/^!join (#.+)$/)) {
+        console.log("Joining "+match[1]);
+        redis.publish('out', JSON.stringify({
+          version: 1,
+          type: 'raw',
+          command: 'JOIN '+match[1]
+        }));
+        return;
+      }
+
       if(match=msg.data.message.match(/^!addhook (.+)/)) {
-        console.log("Adding Github hook");
-        console.log("["+match[1]+"]");
+        console.log("Adding Github hook: ["+match[1]+"]");
         if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/\.]+$/)) {
           add_hook(match[1], msg.data.channel, msg.data.channel);
         } else {
@@ -361,8 +368,7 @@ cron_func = function(){
 
       // Get the list of people in the channel right now
       get_users_in_channel(group.channel, function(members){
-        console.log("Found users for channel "+group.channel);
-        console.log(members);
+        console.log("Found "+Object.keys(members).length+" users in channel "+group.channel);
 
         for(var nick in members) {
           (function(nick){
@@ -399,9 +405,8 @@ cron_func = function(){
               projects.get_lastasked("past", user.username, function(err, lastasked){
                 projects.get_lastreplied("past", user.username, function(err, lastreplied){
                   console.log("  "+group.channel);
-                  console.log("  Last asked " + user.username + " on " + lastasked);
-                  console.log("  Last got a reply from " + user.username + " on " + lastreplied);
-                  console.log(members);
+                  console.log("  Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
+                    + (now()-lastreplied) + " seconds ago");
 
                   if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
                     if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
@@ -472,6 +477,6 @@ sub.on('message', on_message_received);
 new cron('*/5 * * * *', cron_func, null, true, "America/Los_Angeles");
 setTimeout(cron_func, 3000); // Set a delay so the API calls have time to finish first
 
-// Reload the user list every night
-new cron('0 * * * *', load_users, null, true, "America/Los_Angeles");
+// Reload the user list every half hour
+new cron('5,35 * * * *', load_users, null, true, "America/Los_Angeles");
 
