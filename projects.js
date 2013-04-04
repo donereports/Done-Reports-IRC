@@ -194,6 +194,22 @@ function on_message_received(channel, message) {
           zen.send_privmsg(msg.data.channel, "Sorry, I didn't get that. Try '!addhook https://github.com/user/repo #channel'");
         }
       }
+
+      if(msg.data.message == "!reload users") {
+        console.log("Reloading users");
+        load_users();
+        return;
+      }
+
+      if(match=msg.data.message.match(/^!join (#.+)$/)) {
+        console.log("Joining "+match[1]);
+        redis.publish('out', JSON.stringify({
+          version: 1,
+          type: 'raw',
+          command: 'JOIN '+match[1]
+        }));
+        return;
+      }
       return;
     }
 
@@ -219,22 +235,6 @@ function on_message_received(channel, message) {
         message: false,
         type: false
       };
-
-      if(msg.data.message == "!reload users") {
-        console.log("Reloading users");
-        load_users();
-        return;
-      }
-
-      if(match=msg.data.message.match(/^!join (#.+)$/)) {
-        console.log("Joining "+match[1]);
-        redis.publish('out', JSON.stringify({
-          version: 1,
-          type: 'raw',
-          command: 'JOIN '+match[1]
-        }));
-        return;
-      }
 
       if(match=msg.data.message.match(/^!addhook (.+)/)) {
         console.log("Adding Github hook: ["+match[1]+"]");
