@@ -47,7 +47,8 @@ class Controller < Sinatra::Base
       :email => params[:email],
       :github_username => params[:github_username], # This must be globally unique
       :github_email => params[:github_email],
-      :created_at => Time.now
+      :created_at => Time.now,
+      :is_account_admin => true
     })
 
     access_token = generate_access_token user
