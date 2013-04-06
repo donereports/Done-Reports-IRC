@@ -43,6 +43,8 @@ class Controller < Sinatra::Base
     return link.is_admin == true
   end
 
+  # TODO: New method user_can_admin_org?(user, org)
+
   def generate_access_token(user)
     JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
   end
@@ -102,16 +104,17 @@ class Controller < Sinatra::Base
     json_response(200, {
       :username => auth_user.username,
       :email => auth_user.email,
-      :is_account_admin => auth_user.is_account_admin
+      :is_account_admin => auth_user.is_account_admin # TODO: remove this, not needed
     })
   end
 
-  # Retrieve all users in the account, including the list of channels each user is in
+  # Retrieve all users for all orgs, including the list of channels each user is in
   # Does not include deactivated users
   get '/api/users' do
     auth_user = validate_access_token params[:access_token]
 
     users = []
+    # TODO: change to auth_user.orgs.collect
     auth_user.account.users.all(:active => true).each do |user|
       users << {
         :username => user.username,
@@ -133,10 +136,11 @@ class Controller < Sinatra::Base
     })
   end
 
-  # Get a list of all groups the authenticated user has access to
+  # Get a list of all groups the authenticated user has access to across all orgs
   get '/api/groups' do
     auth_user = validate_access_token params[:access_token]
 
+    # TODO: add auth_user.orgs.collect - still need to keep the account.groups vs user.groups difference
     groups = (auth_user.is_account_admin ? auth_user.account.groups : auth_user.groups).collect { |group|
       zone = Timezone::Zone.new :zone => group.due_timezone
       time = group.due_time.to_time.strftime("%l:%M%P").strip
@@ -157,6 +161,8 @@ class Controller < Sinatra::Base
     })
   end
 
+  # TODO: add org param, '/api/orgs/:org/groups/:group'
+  # TODO: verify permission on org
   get '/api/groups/:group' do
     auth_user = validate_access_token params[:access_token]
 
@@ -183,9 +189,11 @@ class Controller < Sinatra::Base
     })
   end
 
+  # TODO: add org param: '/api/orgs/:org/groups'
   post '/api/groups' do
     auth_user = validate_access_token params[:access_token]
 
+    # TODO: verify user permission on org
     if !auth_user.is_account_admin
       halt json_error(200, {
         :error => 'forbidden',
@@ -236,6 +244,7 @@ class Controller < Sinatra::Base
     })
   end
 
+  # TODO: add org param: '/api/orgs/:org/groups/:group/users'
   get '/api/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
 
@@ -278,6 +287,7 @@ class Controller < Sinatra::Base
       })
     end
 
+    # TODO: wrap in user.orgs list
     groups = user.groups.collect {|group|
       {
         :slug => group.slug,
@@ -354,9 +364,11 @@ class Controller < Sinatra::Base
   end
 
   # Add an existing user to a group
+  # TODO: Add :org param
   post '/api/users/:username/groups' do
     auth_user = validate_access_token params[:access_token]
     group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+    # TODO: verify permission on org as well
 
     if group.nil?
       halt json_error(200, {
@@ -387,6 +399,7 @@ class Controller < Sinatra::Base
     user.groups << group
     user.save
 
+    # TODO: Do we really need to return this list?
     groups = user.groups.collect {|group|
       {
         :slug => group.slug,
@@ -403,6 +416,8 @@ class Controller < Sinatra::Base
     })
   end
 
+  # Remove a user from a group
+  # TODO: add :org param
   post '/api/users/:username/groups/:group/remove' do
     auth_user = validate_access_token params[:access_token]
     group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
@@ -452,6 +467,7 @@ class Controller < Sinatra::Base
   end
 
   # Create a new user, optionally adding them to a group at the same time
+  # TODO: add :org param
   post '/api/users' do
     auth_user = validate_access_token params[:access_token]
 
@@ -500,8 +516,9 @@ class Controller < Sinatra::Base
     })
   end
 
+  # TODO: Consider removing this completely in favor of removing people from orgs and groups
   # Deactivate a user account
-  # Can only deactivate a user account that belongs to a group you administer
+  # Can only deactivate a user account that belongs to a group or org you administer
   post '/api/users/:username/deactivate' do
     auth_user = validate_access_token params[:access_token]
 
@@ -518,6 +535,7 @@ class Controller < Sinatra::Base
     end
 
     # Find out if the authenticated user is an admin for any groups this user belongs to
+    # TODO: Also check orgs
     can_deactivate = false
     user.groups.each do |group|
       can_deactivate = true if user_can_admin_group? auth_user, group
