@@ -43,6 +43,10 @@ class Controller < Sinatra::Base
     return link.is_admin == true
   end
 
+  def generate_access_token(user)
+    JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
+  end
+
   get '/auth/github' do
     if params[:code]
       result = RestClient.post "https://github.com/login/oauth/access_token", {
@@ -66,9 +70,8 @@ class Controller < Sinatra::Base
         })
       end
 
-      token = JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
+      token = generate_access_token user
 
-      # TODO: If a redirect parameter is present, redirect to the site with the token in the URL instead
       if session[:state] != params[:state]
         json_error(200, {
           :error => 'invalid_state'
@@ -82,14 +85,49 @@ class Controller < Sinatra::Base
       else
         json_response(200, {
           :username => user.username,
-          :token => token
+          :access_token => token
         })
       end
     else
+      # Start the Github login flow now
       session[:redirect] = params[:redirect] if params[:redirect]
       session[:state] = SecureRandom.urlsafe_base64(20)
       redirect "https://github.com/login/oauth/authorize?client_id=#{SiteConfig.github_id}&state=#{session[:state]}"
     end
+  end
+
+  get '/auth/assertion' do
+    validate_account_access params[:supertoken]
+
+    if params[:username] == nil || params[:username] == ""
+      halt json_error(200, {
+        :error => 'missing_username',
+        :error_description => 'Parameter \'username\' is required'
+      })
+    end
+
+    user = User.first :github_username => params[:username]
+    token = generate_access_token user
+    if params[:redirect]
+      uri = URI.parse params[:redirect]
+      uri.query = "username=#{user.username}&access_token=#{token}"
+      redirect uri.to_s
+    else
+      json_response(200, {
+        :username => user.username,
+        :access_token => token
+      })
+    end
+  end
+
+  get '/api/self' do
+    auth_user = validate_access_token params[:access_token]
+
+    json_response(200, {
+      :username => auth_user.username,
+      :email => auth_user.email,
+      :is_account_admin => auth_user.is_account_admin
+    })
   end
 
   # Retrieve all users in the account, including the list of channels each user is in
@@ -102,6 +140,8 @@ class Controller < Sinatra::Base
       users << {
         :username => user.username,
         :email => user.email,
+        :nicks => user.nicks,
+        :active => user.active,
         :groups => user.groups.collect {|group|
           {
             :slug => group.slug,
@@ -435,7 +475,7 @@ class Controller < Sinatra::Base
     })
   end
 
-  # Create a new user account, optionally adding them to a group at the same time
+  # Create a new user, optionally adding them to a group at the same time
   post '/api/users' do
     auth_user = validate_access_token params[:access_token]
 
