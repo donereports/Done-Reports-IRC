@@ -116,7 +116,7 @@ function now() {
 }
 
 function is_explicit_command(m) {
-  if(m.match(/^!(done|todo|block|hero|undone|quote|addhook) .+/) || m.match(/^(done|todo|block|hero|undone|quote)! .+/)) {
+  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|addhook) .+/) || m.match(/^(done|doing|todo|block|hero|undone|quote)! .+/)) {
     return true;
   } else {
     return false;
@@ -247,10 +247,17 @@ function on_message_received(channel, message) {
       }
 
       if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
-        console.log(username + " did something: " + match[1]);
+        console.log(username + " finished: " + match[1]);
 
         done.message = match[1];
-        done.type = "past";
+        done.type = "done";
+
+      } else if((match=msg.data.message.match(/^doing! (.+)/)) || (match=msg.data.message.match(/^!doing (.+)/))) {
+        console.log(username + " is doing: " + match[1]);
+
+        // Record their reply
+        done.message = match[1];
+        done.type = "doing";
 
       } else if((match=msg.data.message.match(/^todo! (.+)/)) || (match=msg.data.message.match(/^!todo (.+)/))) {
         console.log(username + " will do: " + match[1]);
@@ -291,10 +298,15 @@ function on_message_received(channel, message) {
           if(lastasked) {
             var threshold = 60 * 30;
 
-            if(lastasked.past && now() - parseInt(lastasked.past) < threshold) {
+            if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
               // Record a reply to "last"
               done.message = match[1];
-              done.type = "past";
+              done.type = "done";
+
+            } else if(lastasked.doing && now() - parseInt(lastasked.doing) < threshold) {
+              // Record a reply to "future"
+              done.message = match[1];
+              done.type = "doing";
 
             } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
               // Record a reply to "future"
@@ -402,8 +414,8 @@ cron_func = function(){
             if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
-              projects.get_lastasked("past", user.username, function(err, lastasked){
-                projects.get_lastreplied("past", user.username, function(err, lastreplied){
+              projects.get_lastasked("doing", user.username, function(err, lastasked){
+                projects.get_lastreplied("doing", user.username, function(err, lastreplied){
                   console.log("  "+group.channel+" Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
                     + (now()-lastreplied) + " seconds ago");
 
@@ -419,7 +431,7 @@ cron_func = function(){
                       }
 
                       console.log("  asking " + nick + "(" + user.username + ") on " + group.channel + " now!");
-                      projects.ask_past(group.channel, user.username, nick);
+                      projects.ask_doing(group.channel, user.username, nick);
                     }
                   }
                 });

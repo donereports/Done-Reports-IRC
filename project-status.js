@@ -18,7 +18,19 @@ ProjectStatus.prototype.rkey = function(key) {
 }
 
 
-ProjectStatus.prototype.ask_past = function(channel, username, nick) {
+ProjectStatus.prototype.ask_done = function(channel, username, nick) {
+  var self = this;
+
+  var questions = [
+    "What did you finish?",
+    "Did you finish anything?",
+  ];
+
+  self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
+  self.set_lastasked("done", username);
+};
+
+ProjectStatus.prototype.ask_doing = function(channel, username, nick) {
   var self = this;
 
   var questions = [
@@ -28,7 +40,7 @@ ProjectStatus.prototype.ask_past = function(channel, username, nick) {
   ];
 
   self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("past", username);
+  self.set_lastasked("doing", username);
 };
 
 ProjectStatus.prototype.ask_future = function(channel, username, nick) {
@@ -72,6 +84,17 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
 
   var replies;
 
+  // Set a few default replies. Specific types can override or add to this list.
+  replies = [
+    nick + ": Got it!",
+    nick + ": Nice.",
+    nick + ": nice",
+    nick + ": Ok! Got it!",
+    nick + ": ok!",
+    nick + ": awesome!",
+    nick + ": Awesome!"
+  ];
+
   switch(type) {
     case 'remove':
       replies = [
@@ -91,23 +114,32 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
         nick + ": Thanks for letting me know!"
       ];
       break;
-    default:
-      replies = [
-        nick + ": Thanks!",
-        nick + ": Got it!",
-        nick + ": Cheers!",
-        nick + ": cheers!",
-        nick + ": Nice.",
-        nick + ": nice",
-        nick + ": Great, thanks!",
-        nick + ": Sweet. Thanks!",
-        nick + ": Ok! Got it!",
-        nick + ": ok!",
-        nick + ": Nicely done.",
-        nick + ": awesome!",
-        nick + ": Awesome!",
-        "Thanks, " + nick
-      ];
+    case 'done':
+      replies.push(nick + ": Nicely done.");
+      replies.push(nick + ": Nicely done!");
+      replies.push(nick + ": nicely done!");
+      break;
+    case 'doing':
+      replies.push(nick + ": great, thanks!");
+      replies.push(nick + ": Great, thanks!");
+      replies.push(nick + ": Thanks!");
+      replies.push(nick + ": thanks!");
+      replies.push("Thanks, " + nick);
+      replies.push("Thanks, " + nick + "!");
+      break;
+    case 'quote':
+      replies.push(nick + ": Good one!");
+      replies.push(nick + ": good one!");
+      replies.push(nick + ": lol!");
+      replies.push(nick + ": haha, awesome");
+      replies.push(nick + ": haha, awesome!");
+      break;
+    case 'hero':
+      replies.push(nick + ": sweet!");
+      replies.push(nick + ": Sweet!");
+      replies.push(nick + ": yeah!!");
+      replies.push(nick + ": yeah!");
+      replies.push(nick + ": awesome!");
       break;
   }
 
@@ -121,13 +153,14 @@ ProjectStatus.prototype.get_lastasked = function(type, username, callback) {
   var self = this;
 
   if(type == "all") {
-    self.redis.mget([self.rkey("lastasked-past-"+username),self.rkey("lastasked-future-"+username),self.rkey("lastasked-blocking-"+username),self.rkey("lastasked-hero-"+username)], function(err,data){
+    self.redis.mget([self.rkey("lastasked-done-"+username),self.rkey("lastasked-doing-"+username),self.rkey("lastasked-future-"+username),self.rkey("lastasked-blocking-"+username),self.rkey("lastasked-hero-"+username)], function(err,data){
       if(data){
         callback({
-          past: data[0],
-          future: data[1],
-          blocking: data[2],
-          hero: data[3]
+          done: data[0],
+          doing: data[1],
+          future: data[2],
+          blocking: data[3],
+          hero: data[4]
         });
       }
     });
