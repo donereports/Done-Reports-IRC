@@ -96,30 +96,6 @@ class Controller < Sinatra::Base
     end
   end
 
-  get '/auth/assertion' do
-    validate_account_access params[:supertoken]
-
-    if params[:username] == nil || params[:username] == ""
-      halt json_error(200, {
-        :error => 'missing_username',
-        :error_description => 'Parameter \'username\' is required'
-      })
-    end
-
-    user = User.first :github_username => params[:username]
-    token = generate_access_token user
-    if params[:redirect]
-      uri = URI.parse params[:redirect]
-      uri.query = "username=#{user.username}&access_token=#{token}"
-      redirect uri.to_s
-    else
-      json_response(200, {
-        :username => user.username,
-        :access_token => token
-      })
-    end
-  end
-
   get '/api/self' do
     auth_user = validate_access_token params[:access_token]
 
