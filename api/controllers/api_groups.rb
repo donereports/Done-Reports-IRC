@@ -204,7 +204,8 @@ class Controller < Sinatra::Base
 
 
   # Add an existing user to a group
-  post '/api/users/:username/groups' do
+  # If the user is not yet part of the organization, they are added at this time
+  post '/api/orgs/:org/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
 
     if params[:org].nil?
@@ -237,31 +238,61 @@ class Controller < Sinatra::Base
       })
     end
 
-    user = User.first({
-      :username => params[:username]
-    })
+    if params[:username].is_a? Array
+      users = []
+      missing = []
 
-    if user.nil?
-      halt json_error(200, {
-        :error => 'user_not_found', 
-        :error_description => 'The specified user was not found'
+      params[:username].each do |username|
+        user = User.first({
+          :username => username
+        })
+        if user.nil?
+          missing << username
+        else
+          users << user
+        end
+      end
+
+      if missing.length > 0
+        halt json_error(200, {
+          :error => 'user_not_found', 
+          :error_description => 'Some users were not found',
+          :users => missing
+        })
+      end
+
+      users.each do |user|
+        user.groups += group
+        user.orgs += org
+        user.save
+      end
+    else
+      user = User.first({
+        :username => params[:username]
       })
-    end
 
-    user.groups << group
-    user.orgs << org
-    user.save
+      if user.nil?
+        halt json_error(200, {
+          :error => 'user_not_found', 
+          :error_description => 'The specified user was not found'
+        })
+      end
+
+      user.groups += group
+      user.orgs += org
+      user.save
+    end
 
     json_response(200, {
       :result => 'success',
-      :username => user.username,
+      :username => params[:username],
       :org => org.name,
       :group => group.slug,
     })
   end
 
   # Remove a user from a group
-  post '/api/users/:username/groups/remove' do
+  post '/api/orgs/:org/groups/:group/users/remove' do
     auth_user = validate_access_token params[:access_token]
     if params[:org].nil?
       halt json_error(200, {
@@ -293,23 +324,54 @@ class Controller < Sinatra::Base
       })
     end
 
-    user = org.users.first({
-      :username => params[:username]
-    })
+    if params[:username].is_a? Array
+      users = []
+      missing = []
 
-    if user.nil?
-      halt json_error(200, {
-        :error => 'user_not_found', 
-        :error_description => 'The specified user was not found in the group'
+      params[:username].each do |username|
+        user = org.users.first({
+          :username => username
+        })
+        if user.nil?
+          missing << username
+        else
+          users << user
+        end
+      end
+
+      if missing.length > 0
+        halt json_error(200, {
+          :error => 'user_not_found', 
+          :error_description => 'Some users were not found in the organization',
+          :users => missing
+        })
+      end
+
+      users.each do |user|
+        # TODO: If the user doesn't belong to any other groups in this org, remove them from the org
+        user.groups -= group
+        user.save
+      end
+    else
+      user = org.users.first({
+        :username => params[:username]
       })
-    end
 
-    user.groups -= group
-    user.save
+      if user.nil?
+        halt json_error(200, {
+          :error => 'user_not_found', 
+          :error_description => 'The specified user was not found in the organization'
+        })
+      end
+
+      # TODO: If the user doesn't belong to any other groups in this org, remove them from the org
+      user.groups -= group
+      user.save
+    end
 
     json_response(200, {
       :result => 'success',
-      :username => user.username,
+      :username => params[:username],
       :org => org.name,
       :group => group.slug,
     })
