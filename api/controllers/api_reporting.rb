@@ -15,7 +15,7 @@ class Controller < Sinatra::Base
   end
 
   def load_user(username, group)
-    user = User.first :account_id => group.account_id, :username => username
+    user = User.first :org_id => group.org_id, :username => username
 
     if user.nil?
       halt json_error(200, {:error => 'user_not_found', :error_description => "No user was found for username \"#{username}\"", :error_username => username})
@@ -46,19 +46,6 @@ class Controller < Sinatra::Base
     group = load_group params[:token]
 
     user = load_user params[:username], group
-
-    # user = User.first_or_create({
-    #   :account_id => group.account_id, 
-    #   :username => params[:username]
-    # }, {
-    #   :email => params[:email],
-    #   :github_username => params[:github_username],
-    #   :github_email => params[:github_email],
-    #   :gitlab_email => params[:gitlab_email],
-    #   :gitlab_username => params[:gitlab_username],
-    #   :gitlab_user_id => (params[:gitlab_user_id] ? params[:gitlab_user_id] : 0),
-    #   :created_at => Time.now
-    # })
 
     report = Report.current_report(group)
 

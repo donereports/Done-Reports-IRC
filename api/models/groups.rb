@@ -2,7 +2,7 @@ class Group
   include DataMapper::Resource
   property :id, Serial
 
-  belongs_to :account
+  belongs_to :org
   # belongs_to :ircserver
   has n, :reports
   has n, :users, :through => :group_user

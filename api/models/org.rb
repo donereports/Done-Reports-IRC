@@ -1,9 +1,9 @@
-class Account
+class Org
   include DataMapper::Resource
   property :id, Serial
 
   has n, :groups
-  has n, :users
+  has n, :users, :through => :org_user
 
   property :name, String, :length => 128
 

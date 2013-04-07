@@ -37,13 +37,18 @@ class Controller < Sinatra::Base
   end
 
   def user_can_admin_group?(user, group)
-    return true if user.is_account_admin
+    return true if user_can_admin_org?(user, group.org)
     link = user.group_user.first(:group => group)
     return false if link.nil?
     return link.is_admin == true
   end
 
   # TODO: New method user_can_admin_org?(user, org)
+  def user_can_admin_org?(user, org)
+    link = user.org_user.first(:org => org)
+    return false if link.nil?
+    return link.is_admin == true
+  end
 
   def generate_access_token(user)
     JWT.encode({:user_id => user.id}, SiteConfig.token_secret)
@@ -103,8 +108,7 @@ class Controller < Sinatra::Base
 
     json_response(200, {
       :username => auth_user.username,
-      :email => auth_user.email,
-      :is_account_admin => auth_user.is_account_admin # TODO: remove this, not needed
+      :email => auth_user.email
     })
   end
 
@@ -114,21 +118,22 @@ class Controller < Sinatra::Base
     auth_user = validate_access_token params[:access_token]
 
     users = []
-    # TODO: change to auth_user.orgs.collect
-    auth_user.account.users.all(:active => true).each do |user|
-      users << {
-        :username => user.username,
-        :email => user.email,
-        :nicks => user.nicks,
-        :active => user.active,
-        :groups => user.groups.collect {|group|
-          {
-            :slug => group.slug,
-            :name => group.name,
-            :channel => group.irc_channel,
+    auth_user.orgs.all.each do |org|
+      org.users.all(:active => true).each do |user|
+        users << {
+          :username => user.username,
+          :email => user.email,
+          :nicks => user.nicks,
+          :active => user.active,
+          :groups => user.groups.all(:org => org).collect {|group|
+            {
+              :slug => group.slug,
+              :name => group.name,
+              :channel => group.irc_channel,
+            }
           }
         }
-      }
+      end
     end
 
     json_response(200, {
@@ -140,34 +145,56 @@ class Controller < Sinatra::Base
   get '/api/groups' do
     auth_user = validate_access_token params[:access_token]
 
-    # TODO: add auth_user.orgs.collect - still need to keep the account.groups vs user.groups difference
-    groups = (auth_user.is_account_admin ? auth_user.account.groups : auth_user.groups).collect { |group|
-      zone = Timezone::Zone.new :zone => group.due_timezone
-      time = group.due_time.to_time.strftime("%l:%M%P").strip
-
-      {
-        :slug => group.slug,
-        :name => group.name,
-        :channel => group.irc_channel,
-        :timezone => group.due_timezone,
-        :time => time,
-        :members => group.users.length,
-        :is_admin => user_can_admin_group?(auth_user, group)
+    orgs = []
+    auth_user.orgs.each do |org|
+      orgInfo = {
+        :name => org.name,
+        :groups => []
       }
-    }
+
+      orgInfo[:groups] = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups).collect { |group|
+        zone = Timezone::Zone.new :zone => group.due_timezone
+        time = group.due_time.to_time.strftime("%l:%M%P").strip
+
+        {
+          :slug => group.slug,
+          :name => group.name,
+          :channel => group.irc_channel,
+          :timezone => group.due_timezone,
+          :time => time,
+          :members => group.users.length,
+          :is_admin => user_can_admin_group?(auth_user, group)
+        }
+      }
+
+      orgs << orgInfo
+    end
 
     json_response(200, {
-      :groups => groups
+      :orgs => orgs
     })
   end
 
-  # TODO: add org param, '/api/orgs/:org/groups/:group'
-  # TODO: verify permission on org
-  get '/api/groups/:group' do
+  get '/api/orgs/:org/groups/:group' do
     auth_user = validate_access_token params[:access_token]
 
-    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
 
+    org_user = auth_user.org_user.first(:org => org)
+    if org_user.nil?
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'The user does not have access to this organization'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
       halt json_error(200, {
         :error => 'group_not_found', 
@@ -189,15 +216,21 @@ class Controller < Sinatra::Base
     })
   end
 
-  # TODO: add org param: '/api/orgs/:org/groups'
-  post '/api/groups' do
+  post '/api/orgs/:org/groups' do
     auth_user = validate_access_token params[:access_token]
 
-    # TODO: verify user permission on org
-    if !auth_user.is_account_admin
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    if !user_can_admin_org?(auth_user, org)
       halt json_error(200, {
         :error => 'forbidden',
-        :error_description => 'Only account admins can do that'
+        :error_description => 'Only organization admins can add groups'
       })
     end
 
@@ -208,7 +241,7 @@ class Controller < Sinatra::Base
       })
     end
 
-    group = Group.first :irc_channel => "#{params[:channel]}", :account => auth_user.account
+    group = Group.first :irc_channel => "#{params[:channel]}", :org => org
 
     if !group.nil?
       halt json_error(200, {
@@ -218,7 +251,7 @@ class Controller < Sinatra::Base
     end
 
     group = Group.create({
-      account: auth_user.account,
+      org: org,
       irc_channel: "#{params[:channel]}",
       token: SecureRandom.urlsafe_base64(32),
       name: params[:name],
@@ -244,12 +277,26 @@ class Controller < Sinatra::Base
     })
   end
 
-  # TODO: add org param: '/api/orgs/:org/groups/:group/users'
-  get '/api/groups/:group/users' do
+  get '/api/orgs/:org/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
 
-    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
 
+    org_user = auth_user.org_user.first(:org => org)
+    if org_user.nil?
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'The user does not have access to this organization'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
       halt json_error(200, {
         :error => 'group_not_found', 
@@ -364,12 +411,25 @@ class Controller < Sinatra::Base
   end
 
   # Add an existing user to a group
-  # TODO: Add :org param
   post '/api/users/:username/groups' do
     auth_user = validate_access_token params[:access_token]
-    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
-    # TODO: verify permission on org as well
 
+    if params[:org].nil?
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Parameter \'org\' is required'
+      })
+    end
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
       halt json_error(200, {
         :error => 'group_not_found', 
@@ -385,7 +445,6 @@ class Controller < Sinatra::Base
     end
 
     user = User.first({
-      :account_id => group.account_id, 
       :username => params[:username]
     })
 
@@ -397,31 +456,36 @@ class Controller < Sinatra::Base
     end
 
     user.groups << group
+    user.orgs << org
     user.save
-
-    # TODO: Do we really need to return this list?
-    groups = user.groups.collect {|group|
-      {
-        :slug => group.slug,
-        :name => group.name,
-        :channel => group.irc_channel,
-        :timezone => group.due_timezone,
-      }
-    }
 
     json_response(200, {
       :result => 'success',
       :username => user.username,
-      :groups => groups,
+      :org => org.name,
+      :group => group.slug,
     })
   end
 
   # Remove a user from a group
-  # TODO: add :org param
-  post '/api/users/:username/groups/:group/remove' do
+  post '/api/users/:username/groups/remove' do
     auth_user = validate_access_token params[:access_token]
-    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+    if params[:org].nil?
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Parameter \'org\' is required'
+      })
+    end
 
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
       halt json_error(200, {
         :error => 'group_not_found', 
@@ -436,48 +500,61 @@ class Controller < Sinatra::Base
       })
     end
 
-    user = User.first({
-      :account_id => group.account_id, 
+    user = org.users.first({
       :username => params[:username]
     })
 
     if user.nil?
       halt json_error(200, {
         :error => 'user_not_found', 
-        :error_description => 'The specified user was not found'
+        :error_description => 'The specified user was not found in the group'
       })
     end
 
     user.groups -= group
     user.save
 
-    groups = user.groups.collect {|group|
-      {
-        :name => group.name,
-        :channel => group.irc_channel,
-        :timezone => group.due_timezone,
-      }
-    }
-
     json_response(200, {
       :result => 'success',
       :username => user.username,
-      :groups => groups,
+      :org => org.name,
+      :group => group.slug,
     })
   end
 
   # Create a new user, optionally adding them to a group at the same time
   # TODO: add :org param
-  post '/api/users' do
+  post '/api/orgs/:org/users' do
     auth_user = validate_access_token params[:access_token]
 
+    if params[:org].nil?
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Parameter \'org\' is required'
+      })
+    end
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    if !user_can_admin_org?(auth_user, org)
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'Only organization admins can add users'
+      })
+    end
+
     user = User.first({
-      :account_id => auth_user.account_id,
       :username => params[:username]
     })
 
     # Support adding this user directly to a group upon creation, optionally
-    group = Group.first :irc_channel => "##{params[:group]}", :account => auth_user.account
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
 
     if group && !user_can_admin_group?(auth_user, group)
       halt json_error(200, {
@@ -487,8 +564,10 @@ class Controller < Sinatra::Base
     end
 
     if user.nil?
+      user_org = Org.create({
+        :name => params[:username]
+      })
       user = User.create({
-        :account_id => group.account_id, 
         :username => params[:username],
         :email => params[:email],
         :github_username => params[:github_username],
@@ -499,12 +578,19 @@ class Controller < Sinatra::Base
         :nicks => params[:nicks],
         :created_at => Time.now,
       })
+      OrgUser.create({
+        :user => user,
+        :org => user_org,
+        :is_admin => true
+      })
       user.groups = [group] unless group.nil?
+      user.orgs << group.org unless group.nil?
       user.save
       status = 'created'
       user
     else
       user.groups << group unless group.nil?
+      user.orgs << group.org unless group.nil?
       user.save
       status = 'updated'
     end
@@ -516,46 +602,5 @@ class Controller < Sinatra::Base
     })
   end
 
-  # TODO: Consider removing this completely in favor of removing people from orgs and groups
-  # Deactivate a user account
-  # Can only deactivate a user account that belongs to a group or org you administer
-  post '/api/users/:username/deactivate' do
-    auth_user = validate_access_token params[:access_token]
-
-    user = User.first({
-      :account_id => auth_user.account_id, 
-      :username => params[:username]
-    })
-
-    if user.nil?
-      halt json_error(200, {
-        :error => 'user_not_found',
-        :error_description => 'No user was found with the specified username'
-      })
-    end
-
-    # Find out if the authenticated user is an admin for any groups this user belongs to
-    # TODO: Also check orgs
-    can_deactivate = false
-    user.groups.each do |group|
-      can_deactivate = true if user_can_admin_group? auth_user, group
-    end
-
-    if !can_deactivate
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'You can only deactivate a user if you administer at least one of the groups the user belongs to'
-      })
-    end
-
-    user.active = false
-    user.save
-
-    json_response(200, {
-      :result => 'success',
-      :status => 'deactivated',
-      :username => user.username
-    })
-  end
 
 end

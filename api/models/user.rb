@@ -2,9 +2,9 @@ class User
   include DataMapper::Resource
   property :id, Serial
 
-  belongs_to :account
   has n, :commits
   has n, :groups, :through => :group_user
+  has n, :orgs, :through => :org_user
 
   property :username, String, :length => 255
   property :email, String, :length => 255

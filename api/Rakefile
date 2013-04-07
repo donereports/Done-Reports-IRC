@@ -11,6 +11,35 @@ namespace :db do
     init
     DataMapper.auto_upgrade!
   end
+
+  # Migration task when orgs were added
+  task :add_orgs do
+    puts 'Run the following SQL commands:'
+    puts 'UPDATE groups SET org_id = account_id;'
+    puts 'ALTER TABLE groups DROP COLUMN account_id;'
+
+    User.all.each do |user|
+      # Create an org for each user with a github username
+      if !user.github_username.nil? && user.github_username != ''
+        org = Org.first_or_create(:name => user.github_username)
+        OrgUser.first_or_create({:user_id => user.id, :org_id => org.id}, {:is_admin => true})
+      end
+
+      # Add all the users to the appropriate accounts based on the groups they're currently in
+      user.groups.orgs.each do |org|
+        if org.name == user.username
+          OrgUser.first_or_create({:user_id => user.id, :org_id => org.id}, {:is_admin => true})
+        else
+          user.orgs << org
+        end
+      end
+
+      user.save
+    end
+
+    puts 'ALTER TABLE users DROP COLUMN account_id;'
+    
+  end
 end
 
 namespace :github do
