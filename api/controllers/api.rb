@@ -118,22 +118,27 @@ class Controller < Sinatra::Base
     auth_user = validate_access_token params[:access_token]
 
     users = []
-    auth_user.orgs.all.each do |org|
-      org.users.all(:active => true).each do |user|
-        users << {
-          :username => user.username,
-          :email => user.email,
-          :nicks => user.nicks,
-          :active => user.active,
-          :groups => user.groups.all(:org => org).collect {|group|
+    auth_user.orgs.users.all(:active => true).each do |user|
+      users << {
+        :username => user.username,
+        :email => user.email,
+        :nicks => user.nicks,
+        :active => user.active,
+        :groups => user.groups.all.collect{|group|
+          # Only returns groups from organizations the authenticating user has access to
+          org_user = auth_user.org_user.first(:org => group.org)
+          if org_user.nil?
+            nil
+          else
             {
+              :org => group.org.name,
               :slug => group.slug,
               :name => group.name,
               :channel => group.irc_channel,
             }
-          }
-        }
-      end
+          end
+        }.reject{|item| item.nil?}
+      }
     end
 
     json_response(200, {
@@ -207,6 +212,7 @@ class Controller < Sinatra::Base
 
     json_response(200, {
       :slug => group.slug,
+      :org_name => org.name,
       :name => group.name,
       :channel => group.irc_channel,
       :timezone => group.due_timezone,
@@ -216,6 +222,7 @@ class Controller < Sinatra::Base
     })
   end
 
+  # Create a new group under the given organization
   post '/api/orgs/:org/groups' do
     auth_user = validate_access_token params[:access_token]
 
@@ -338,6 +345,7 @@ class Controller < Sinatra::Base
     groups = user.groups.collect {|group|
       {
         :slug => group.slug,
+        :org_name => group.org.name,
         :name => group.name,
         :channel => group.irc_channel,
         :timezone => group.due_timezone,
@@ -523,7 +531,6 @@ class Controller < Sinatra::Base
   end
 
   # Create a new user, optionally adding them to a group at the same time
-  # TODO: add :org param
   post '/api/orgs/:org/users' do
     auth_user = validate_access_token params[:access_token]
 
