@@ -1,7 +1,7 @@
 class Controller < Sinatra::Base
 
   get '/?' do
-    erb :index
+    redirect 'http://donereports.com/'
   end
 
   def json_error(code, data)
