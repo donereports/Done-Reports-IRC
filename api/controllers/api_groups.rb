@@ -112,14 +112,34 @@ class Controller < Sinatra::Base
       })
     end
 
+    if params[:timezone] && params[:timezone] != ''
+      begin
+        Timezone::Zone.new :zone => params[:timezone]
+      rescue
+        halt json_error(200, {
+          :error => 'invalid_input',
+          :error_description => 'Not a valid timezone'
+        })
+      end
+    end
+
+    if params[:time] && params[:time] != ''
+      unless params[:time].match /^\d\d:\d\d$/
+        halt json_error(200, {
+          :error => 'invalid_input',
+          :error_description => 'Count not parse given time value'
+        })
+      end
+    end
+
     group = Group.create({
       org: org,
       irc_channel: "#{params[:channel]}",
       token: SecureRandom.urlsafe_base64(32),
       name: params[:name],
       due_day: 'every',
-      due_time: DateTime.parse('2000-01-01 21:00:00'),
-      due_timezone: 'America/Los_Angeles',
+      due_time: (params[:time] ? DateTime.parse("2000-01-01 #{params[:time]}:00") : DateTime.parse('2000-01-01 21:00:00')),
+      due_timezone: (params[:timezone] || 'America/Los_Angeles'),
       send_reminder: 2,
       github_token: SecureRandom.urlsafe_base64(12),
       zenircbot_url: SiteConfig.zenircbot_url,
