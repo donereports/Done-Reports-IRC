@@ -202,4 +202,117 @@ class Controller < Sinatra::Base
     })
   end
 
+
+  # Add an existing user to a group
+  post '/api/users/:username/groups' do
+    auth_user = validate_access_token params[:access_token]
+
+    if params[:org].nil?
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Parameter \'org\' is required'
+      })
+    end
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
+    if group.nil?
+      halt json_error(200, {
+        :error => 'group_not_found', 
+        :error_description => 'The specified group was not found'
+      })
+    end
+
+    if !user_can_admin_group?(auth_user, group)
+      halt json_error(200, {
+        :error => 'forbidden', 
+        :error_description => 'You are not an admin for this group'
+      })
+    end
+
+    user = User.first({
+      :username => params[:username]
+    })
+
+    if user.nil?
+      halt json_error(200, {
+        :error => 'user_not_found', 
+        :error_description => 'The specified user was not found'
+      })
+    end
+
+    user.groups << group
+    user.orgs << org
+    user.save
+
+    json_response(200, {
+      :result => 'success',
+      :username => user.username,
+      :org => org.name,
+      :group => group.slug,
+    })
+  end
+
+  # Remove a user from a group
+  post '/api/users/:username/groups/remove' do
+    auth_user = validate_access_token params[:access_token]
+    if params[:org].nil?
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'Parameter \'org\' is required'
+      })
+    end
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
+    if group.nil?
+      halt json_error(200, {
+        :error => 'group_not_found', 
+        :error_description => 'The specified group was not found'
+      })
+    end
+
+    if !user_can_admin_group?(auth_user, group)
+      halt json_error(200, {
+        :error => 'forbidden', 
+        :error_description => 'You are not an admin for this group'
+      })
+    end
+
+    user = org.users.first({
+      :username => params[:username]
+    })
+
+    if user.nil?
+      halt json_error(200, {
+        :error => 'user_not_found', 
+        :error_description => 'The specified user was not found in the group'
+      })
+    end
+
+    user.groups -= group
+    user.save
+
+    json_response(200, {
+      :result => 'success',
+      :username => user.username,
+      :org => org.name,
+      :group => group.slug,
+    })
+  end
+
 end
