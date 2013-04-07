@@ -191,6 +191,7 @@ class Controller < Sinatra::Base
     group.users.all(:active => true).each do |user|
       users << {
         :username => user.username,
+        :avatar_url => user.avatar_url,
         :email => user.email,
         :nicks => user.nicks
       }

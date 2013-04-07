@@ -9,6 +9,7 @@ class Controller < Sinatra::Base
     auth_user.orgs.users.all(:active => true).each do |user|
       users << {
         :username => user.username,
+        :avatar_url => user.avatar_url,
         :email => user.email,
         :nicks => user.nicks,
         :active => user.active,
@@ -63,6 +64,7 @@ class Controller < Sinatra::Base
 
     json_response(200, {
       :username => user.username,
+      :avatar_url => user.avatar_url,
       :email => user.email,
       :github_username => user.github_username,
       :github_email => user.github_email,

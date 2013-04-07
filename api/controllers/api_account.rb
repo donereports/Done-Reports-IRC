@@ -41,6 +41,30 @@ class Controller < Sinatra::Base
     end
   end
 
+  get '/autocomplete/users' do
+    validate_account_access params[:supertoken]
+
+    if params[:input] == nil || params[:input] == ''
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'No input provided'
+      })
+    end
+
+    users = []
+
+    User.all(:active => true, :username.like => "#{params[:input]}%").each do |user|
+      users << {
+        :username => user.username,
+        :avatar_url => user.avatar_url
+      }
+    end
+
+    json_response(200, {
+      :users => users
+    })
+  end
+
   # Create a new organization and user
   post '/accounts' do
     validate_account_access params[:supertoken]

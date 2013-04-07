@@ -18,4 +18,13 @@ class User
   property :is_account_admin, Boolean, :default => false
 
   property :created_at, DateTime
+
+  def avatar_url
+    if !github_email.nil? && github_email != ''
+      "https://secure.gravatar.com/avatar/#{Digest::MD5.hexdigest(github_email)}?s=40&d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png"
+    else
+      "https://secure.gravatar.com/avatar/#{Digest::MD5.hexdigest(email)}?s=40&d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png"
+      #{}"https://a248.e.akamai.net/assets.github.com/images/gravatars/gravatar-user-420.png"
+    end
+  end
 end
