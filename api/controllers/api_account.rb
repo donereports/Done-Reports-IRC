@@ -41,7 +41,7 @@ class Controller < Sinatra::Base
     end
   end
 
-  # Create a new account and user
+  # Create a new organization and user
   post '/accounts' do
     validate_account_access params[:supertoken]
 
@@ -70,19 +70,19 @@ class Controller < Sinatra::Base
       })
     end
 
-    account = Account.create({
+    org = Org.create({
       :name => params[:name]
     })
 
     user = User.create({
-      :account => account,
-      :username => params[:github_username], # This can safely be changed later
+      :username => params[:github_username],
       :email => params[:email],
       :github_username => params[:github_username], # This must be globally unique
       :github_email => params[:github_email],
       :created_at => Time.now,
-      :is_account_admin => true
     })
+    user.org_user << {:org => org, :is_admin => true}
+    user.save
 
     access_token = generate_access_token user
 
