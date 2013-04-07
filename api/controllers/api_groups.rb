@@ -21,6 +21,7 @@ class Controller < Sinatra::Base
           :channel => group.irc_channel,
           :timezone => group.due_timezone,
           :time => time,
+          :date_created => group.created_at,
           :members => group.users.length,
           :is_admin => user_can_admin_group?(auth_user, group)
         }
