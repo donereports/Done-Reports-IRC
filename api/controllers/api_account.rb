@@ -65,6 +65,26 @@ class Controller < Sinatra::Base
     })
   end
 
+  get '/autocomplete/user/:username' do |username|
+    validate_account_access params[:supertoken]
+
+    user = User.first(:username => username)
+
+    if user.nil?
+      json_response(200, {
+        :error => 'user_not_found'
+      })
+    else
+      json_response(200, {
+        :username => user.username,
+        :email => user.email,
+        :nicks => user.nicks,
+        :github_username => user.github_username,
+        :github_email => user.github_email
+      })
+    end
+  end
+
   # Create a new organization and user
   post '/accounts' do
     validate_account_access params[:supertoken]
