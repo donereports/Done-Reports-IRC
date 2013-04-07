@@ -11,7 +11,7 @@ class Controller < Sinatra::Base
         :groups => []
       }
 
-      orgInfo[:groups] = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups).collect { |group|
+      orgInfo[:groups] = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
         zone = Timezone::Zone.new :zone => group.due_timezone
         time = group.due_time.to_time.strftime("%l:%M%P").strip
 
