@@ -19,6 +19,7 @@ class Controller < Sinatra::Base
           :slug => group.slug,
           :name => group.name,
           :channel => group.irc_channel,
+          :server => (group.ircserver ? group.ircserver.api_hash : nil),
           :timezone => group.due_timezone,
           :time => time,
           :date_created => group.created_at,
@@ -48,6 +49,7 @@ class Controller < Sinatra::Base
         :slug => group.slug,
         :name => group.name,
         :channel => group.irc_channel,
+        :server => (group.ircserver ? group.ircserver.api_hash : nil),
         :timezone => group.due_timezone,
         :time => time,
         :date_created => group.created_at,
@@ -82,6 +84,7 @@ class Controller < Sinatra::Base
       :org_name => org.name,
       :name => group.name,
       :channel => group.irc_channel,
+      :server => (group.ircserver ? group.ircserver.api_hash : nil),
       :timezone => group.due_timezone,
       :time => time,
       :members => group.users.length,
@@ -135,6 +138,7 @@ class Controller < Sinatra::Base
       :org_name => org.name,
       :name => group.name,
       :channel => group.irc_channel,
+      :server => (group.ircserver ? group.ircserver.api_hash : nil),
       :timezone => group.due_timezone,
       :time => time,
       :members => group.users.length,
@@ -152,6 +156,10 @@ class Controller < Sinatra::Base
         :error => 'missing_input',
         :error_description => 'Channel is required'
       })
+    end
+
+    unless params[:channel].match /^#/
+      params[:channel] = "##{params[:channel]}"
     end
 
     group = Group.first :irc_channel => "#{params[:channel]}", :org => org
@@ -183,8 +191,27 @@ class Controller < Sinatra::Base
       end
     end
 
+    if params[:server].nil? || params[:server] == ''
+      halt json_error(200, {
+        :error => 'missing_input',
+        :error_description => 'No IRC server was specified'
+      })
+    end
+
+    # Check permissions on the specified IRC server
+    server = org.ircservers.all(:hostname => params[:server]) + Ircserver.all(:hostname => params[:server], :global => true)
+    server = server.first
+
+    if server.nil?
+      halt json_error(200, {
+        :error => 'server_not_found',
+        :error_description => 'No server was found with the specified hostname'
+      })
+    end
+
     group = Group.create({
       org: org,
+      ircserver: server,
       irc_channel: "#{params[:channel]}",
       token: SecureRandom.urlsafe_base64(32),
       name: params[:name],
@@ -204,6 +231,7 @@ class Controller < Sinatra::Base
       :slug => group.slug,
       :name => group.name,
       :channel => group.irc_channel,
+      :server => (group.ircserver ? group.ircserver.api_hash : nil),
       :timezone => group.due_timezone,
       :time => time,
       :is_admin => user_can_admin_group?(auth_user, group)

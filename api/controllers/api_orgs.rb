@@ -6,22 +6,10 @@ class Controller < Sinatra::Base
 
     servers = []
     org.ircservers.each do |server|
-      servers << {
-        :hostname => server.hostname,
-        :port => server.port,
-        :ssl => server.ssl,
-        :password => server.server_password,
-        :global => false
-      }
+      servers << server.api_hash(true)
     end
     Ircserver.all(:global => true).each do |server|
-      servers << {
-        :hostname => server.hostname,
-        :port => server.port,
-        :ssl => server.ssl,
-        :password => server.server_password,
-        :global => true
-      }
+      servers << server.api_hash(true)
     end
 
     json_response(200, {
@@ -61,16 +49,8 @@ class Controller < Sinatra::Base
       :server_password => params[:password]
     })
 
-    data = {
-      :hostname => server.hostname,
-      :port => server.port,
-      :ssl => server.ssl,
-      :password => server.server_password,
-      :global => false
-    }
-
     json_response(200, {
-      :server => data
+      :server => server.api_hash(true)
     })
   end
 
