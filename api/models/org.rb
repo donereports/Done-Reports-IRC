@@ -4,6 +4,7 @@ class Org
 
   has n, :groups
   has n, :users, :through => :org_user
+  has n, :ircservers
 
   property :name, String, :length => 128
 
