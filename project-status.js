@@ -223,6 +223,8 @@ ProjectStatus.prototype.record_response = function(username, type, message, nick
     } else {
       if(response.error == "user_not_found") {
         self.zen.send_privmsg(channel, "Sorry, I couldn't find an account for " + response.error_username);
+      } else if(response.error == "user_not_in_group") {
+        self.zen.send_privmsg(channel, "Sorry, you're not in this group!");
       } else {
         self.zen.send_privmsg(channel, "Something went wrong trying to store your entry!");
         console.log(response);
