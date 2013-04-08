@@ -338,7 +338,7 @@ namespace :report do
     # Send out emails for any reports that are open and past the deadline.
 
     Org.all.each do |org|
-      puts "Processing account '#{org.name}'"
+      puts "Processing org '#{org.name}'"
 
       org.groups.each do |group|
 
