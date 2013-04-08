@@ -43,7 +43,6 @@ class Controller < Sinatra::Base
     return link.is_admin == true
   end
 
-  # TODO: New method user_can_admin_org?(user, org)
   def user_can_admin_org?(user, org)
     link = user.org_user.first(:org => org)
     return false if link.nil?

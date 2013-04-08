@@ -13,7 +13,7 @@ class Controller < Sinatra::Base
 
       orgInfo[:groups] = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
         zone = Timezone::Zone.new :zone => group.due_timezone
-        time = group.due_time.to_time.strftime("%l:%M%P").strip
+        time = group.due_time.to_time.strftime("%H:%M")
 
         {
           :slug => group.slug,
@@ -32,6 +32,47 @@ class Controller < Sinatra::Base
 
     json_response(200, {
       :orgs => orgs
+    })
+  end
+
+  # Get a list of all groups on the given org
+  get '/api/orgs/:org/groups' do
+    auth_user = validate_access_token params[:access_token]
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    link = auth_user.org_user.first(:org => org)
+    if link.nil?
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'You do not have permission to access this organization'
+      })
+    end
+
+    groups = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
+      zone = Timezone::Zone.new :zone => group.due_timezone
+      time = group.due_time.to_time.strftime("%H:%M")
+
+      {
+        :slug => group.slug,
+        :name => group.name,
+        :channel => group.irc_channel,
+        :timezone => group.due_timezone,
+        :time => time,
+        :date_created => group.created_at,
+        :members => group.users.length,
+        :is_admin => user_can_admin_group?(auth_user, group)
+      }
+    }
+
+    json_response(200, {
+      :groups => groups
     })
   end
 
@@ -64,7 +105,75 @@ class Controller < Sinatra::Base
     end
 
     zone = Timezone::Zone.new :zone => group.due_timezone
-    time = group.due_time.to_time.strftime("%l:%M%P").strip
+    time = group.due_time.to_time.strftime("%H:%M")
+
+    json_response(200, {
+      :slug => group.slug,
+      :org_name => org.name,
+      :name => group.name,
+      :channel => group.irc_channel,
+      :timezone => group.due_timezone,
+      :time => time,
+      :members => group.users.length,
+      :is_admin => user_can_admin_group?(auth_user, group)
+    })
+  end
+
+  # Update information about a group
+  post '/api/orgs/:org/groups/:group' do
+    auth_user = validate_access_token params[:access_token]
+
+    org = Org.first(:name => params[:org])
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    org_user = auth_user.org_user.first(:org => org)
+    if org_user.nil?
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'The user does not have access to this organization'
+      })
+    end
+
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
+    if group.nil?
+      halt json_error(200, {
+        :error => 'group_not_found', 
+        :error_description => 'The specified group was not found'
+      })
+    end
+
+    if params[:timezone] && params[:timezone] != ''
+      begin
+        Timezone::Zone.new :zone => params[:timezone]
+      rescue
+        halt json_error(200, {
+          :error => 'invalid_input',
+          :error_description => 'Not a valid timezone'
+        })
+      end
+    end
+
+    if params[:time] && params[:time] != ''
+      unless params[:time].match /^\d\d:\d\d$/
+        halt json_error(200, {
+          :error => 'invalid_input',
+          :error_description => 'Count not parse given time value'
+        })
+      end
+    end
+
+    group.name = params[:name] if params[:name]
+    group.due_time = DateTime.parse("2000-01-01 #{params[:time]}:00") if params[:time]
+    group.due_timezone = params[:timezone] if params[:timezone]
+    group.save
+
+    zone = Timezone::Zone.new :zone => group.due_timezone
+    time = group.due_time.to_time.strftime("%H:%M")
 
     json_response(200, {
       :slug => group.slug,
