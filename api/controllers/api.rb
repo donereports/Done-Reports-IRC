@@ -36,6 +36,45 @@ class Controller < Sinatra::Base
     user
   end
 
+  def validate_org_admin!(user, org_name)
+    org = Org.first(:name => org_name)
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    if !user_can_admin_org?(user, org)
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'Only organization admins can do that'
+      })
+    end
+
+    org
+  end
+
+  def validate_org_access!(user, org_name)
+    org = Org.first(:name => org_name)
+    if org.nil?
+      halt json_error(200, {
+        :error => 'not_found',
+        :error_description => 'The organization was not found'
+      })
+    end
+
+    org_user = user.org_user.first(:org => org)
+    if org_user.nil?
+      halt json_error(200, {
+        :error => 'forbidden',
+        :error_description => 'The user does not have access to this organization'
+      })
+    end
+
+    org
+  end
+
   def user_can_admin_group?(user, group)
     return true if user_can_admin_org?(user, group.org)
     link = user.group_user.first(:group => group)

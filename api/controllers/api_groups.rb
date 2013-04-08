@@ -38,22 +38,7 @@ class Controller < Sinatra::Base
   # Get a list of all groups on the given org
   get '/api/orgs/:org/groups' do
     auth_user = validate_access_token params[:access_token]
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
-
-    link = auth_user.org_user.first(:org => org)
-    if link.nil?
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'You do not have permission to access this organization'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     groups = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
       zone = Timezone::Zone.new :zone => group.due_timezone
@@ -79,22 +64,7 @@ class Controller < Sinatra::Base
   # Retrieve information about a group
   get '/api/orgs/:org/groups/:group' do
     auth_user = validate_access_token params[:access_token]
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
-
-    org_user = auth_user.org_user.first(:org => org)
-    if org_user.nil?
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'The user does not have access to this organization'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
@@ -122,22 +92,7 @@ class Controller < Sinatra::Base
   # Update information about a group
   post '/api/orgs/:org/groups/:group' do
     auth_user = validate_access_token params[:access_token]
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
-
-    org_user = auth_user.org_user.first(:org => org)
-    if org_user.nil?
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'The user does not have access to this organization'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
@@ -190,21 +145,7 @@ class Controller < Sinatra::Base
   # Create a new group under the given organization
   post '/api/orgs/:org/groups' do
     auth_user = validate_access_token params[:access_token]
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
-
-    if !user_can_admin_org?(auth_user, org)
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'Only organization admins can add groups'
-      })
-    end
+    org = validate_org_admin! auth_user, params[:org]
 
     if params[:channel].nil? || params[:channel] == ''
       halt json_error(200, {
@@ -272,22 +213,7 @@ class Controller < Sinatra::Base
   # Get a list of all users in a group
   get '/api/orgs/:org/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
-
-    org_user = auth_user.org_user.first(:org => org)
-    if org_user.nil?
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'The user does not have access to this organization'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
@@ -317,21 +243,7 @@ class Controller < Sinatra::Base
   # If the user is not yet part of the organization, they are added at this time
   post '/api/orgs/:org/groups/:group/users' do
     auth_user = validate_access_token params[:access_token]
-
-    if params[:org].nil?
-      halt json_error(200, {
-        :error => 'missing_input',
-        :error_description => 'Parameter \'org\' is required'
-      })
-    end
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
@@ -404,20 +316,7 @@ class Controller < Sinatra::Base
   # Remove a user from a group
   post '/api/orgs/:org/groups/:group/users/remove' do
     auth_user = validate_access_token params[:access_token]
-    if params[:org].nil?
-      halt json_error(200, {
-        :error => 'missing_input',
-        :error_description => 'Parameter \'org\' is required'
-      })
-    end
-
-    org = Org.first(:name => params[:org])
-    if org.nil?
-      halt json_error(200, {
-        :error => 'not_found',
-        :error_description => 'The organization was not found'
-      })
-    end
+    org = validate_org_access! auth_user, params[:org]
 
     group = Group.first :irc_channel => "##{params[:group]}", :org => org
     if group.nil?
