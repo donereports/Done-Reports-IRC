@@ -162,7 +162,7 @@ class Controller < Sinatra::Base
 
     if payload["sender"]
       username = payload["sender"]["login"]
-      user = User.first(:account_id => group.account_id, :github_username => username)
+      user = User.first(:github_username => username)
     else
       username = ""
       user = nil
@@ -334,7 +334,7 @@ class Controller < Sinatra::Base
         if commit["distinct"]
           repo_url = commit["url"].match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+/)[0]
           repo = Repo.first_or_create :link => repo_url, :group => group
-          user = User.first(:account_id => group.account_id, :github_email => commit["author"]["email"])
+          user = User.first(:github_email => commit["author"]["email"])
           events << Commit.create({
             type: "commit",
             repo: repo,

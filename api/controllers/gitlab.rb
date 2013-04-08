@@ -23,10 +23,10 @@ class Controller < Sinatra::Base
       payload["commits"].each do |commit|
         puts commit.inspect
         # Attempt to map the commit to a user account. Will return nil if not found
-        user = User.first :account_id => group.account_id, :gitlab_email => commit["author"]["email"]
+        user = User.first :gitlab_email => commit["author"]["email"]
         # Try searching for their github email instead
         if user.nil?
-          user = User.first :account_id => group.account_id, :github_email => commit["author"]["email"]
+          user = User.first :github_email => commit["author"]["email"]
         end
         if user
           Commit.create(
@@ -41,7 +41,7 @@ class Controller < Sinatra::Base
         end
       end
 
-      user = User.first :account_id => group.account_id, :gitlab_user_id => payload['user_id']
+      user = User.first :gitlab_user_id => payload['user_id']
       if user
         event = Commit.create({
           type: 'push',
