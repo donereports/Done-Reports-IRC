@@ -34,6 +34,35 @@ class Group
     irc_channel.gsub(/^#/, '').downcase
   end
 
+  def api_hash(is_admin=false)
+    zone = Timezone::Zone.new :zone => due_timezone
+    time = due_time.to_time.strftime("%H:%M")
+
+    data = {
+      :slug => slug,
+      :name => name,
+      :org_name => org.name,
+      :channel => irc_channel,
+      :server => (ircserver ? ircserver.api_hash : nil),
+      :timezone => due_timezone,
+      :time => time,
+      :date_created => created_at,
+      :members => users.length
+    }
+    if is_admin
+      data.merge!({
+        :recipients => (email_recipient ? email_recipient.split(',') : []),
+        :email_members => email_group_members,
+        :is_admin => true
+      })
+    else
+      data.merge!({
+        :is_admin => false
+      })
+    end
+    data
+  end
+
   def send_irc_message(message)
     RestClient.post "#{zenircbot_url}channel/#{URI.encode_www_form_component irc_channel}", :message => message, :token => zenircbot_token
   end

@@ -12,20 +12,7 @@ class Controller < Sinatra::Base
       }
 
       orgInfo[:groups] = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
-        zone = Timezone::Zone.new :zone => group.due_timezone
-        time = group.due_time.to_time.strftime("%H:%M")
-
-        {
-          :slug => group.slug,
-          :name => group.name,
-          :channel => group.irc_channel,
-          :server => (group.ircserver ? group.ircserver.api_hash : nil),
-          :timezone => group.due_timezone,
-          :time => time,
-          :date_created => group.created_at,
-          :members => group.users.length,
-          :is_admin => user_can_admin_group?(auth_user, group)
-        }
+        group.api_hash(user_can_admin_group?(auth_user, group))
       }
 
       orgs << orgInfo
@@ -42,20 +29,7 @@ class Controller < Sinatra::Base
     org = validate_org_access! auth_user, params[:org]
 
     groups = (user_can_admin_org?(auth_user, org) ? org.groups : auth_user.groups.all(:org => org)).collect { |group|
-      zone = Timezone::Zone.new :zone => group.due_timezone
-      time = group.due_time.to_time.strftime("%H:%M")
-
-      {
-        :slug => group.slug,
-        :name => group.name,
-        :channel => group.irc_channel,
-        :server => (group.ircserver ? group.ircserver.api_hash : nil),
-        :timezone => group.due_timezone,
-        :time => time,
-        :date_created => group.created_at,
-        :members => group.users.length,
-        :is_admin => user_can_admin_group?(auth_user, group)
-      }
+      group.api_hash(user_can_admin_group?(auth_user, group))
     }
 
     json_response(200, {
@@ -79,17 +53,7 @@ class Controller < Sinatra::Base
     zone = Timezone::Zone.new :zone => group.due_timezone
     time = group.due_time.to_time.strftime("%H:%M")
 
-    json_response(200, {
-      :slug => group.slug,
-      :org_name => org.name,
-      :name => group.name,
-      :channel => group.irc_channel,
-      :server => (group.ircserver ? group.ircserver.api_hash : nil),
-      :timezone => group.due_timezone,
-      :time => time,
-      :members => group.users.length,
-      :is_admin => user_can_admin_group?(auth_user, group)
-    })
+    json_response(200, group.api_hash(user_can_admin_group?(auth_user, group)))
   end
 
   # Update information about a group
@@ -130,20 +94,7 @@ class Controller < Sinatra::Base
     group.due_timezone = params[:timezone] if params[:timezone]
     group.save
 
-    zone = Timezone::Zone.new :zone => group.due_timezone
-    time = group.due_time.to_time.strftime("%H:%M")
-
-    json_response(200, {
-      :slug => group.slug,
-      :org_name => org.name,
-      :name => group.name,
-      :channel => group.irc_channel,
-      :server => (group.ircserver ? group.ircserver.api_hash : nil),
-      :timezone => group.due_timezone,
-      :time => time,
-      :members => group.users.length,
-      :is_admin => user_can_admin_group?(auth_user, group)
-    })
+    json_response(200, group.api_hash(true))
   end
 
   # Create a new group under the given organization
@@ -227,15 +178,7 @@ class Controller < Sinatra::Base
     zone = Timezone::Zone.new :zone => group.due_timezone
     time = group.due_time.to_time.strftime("%l:%M%P").strip
 
-    json_response(200, {
-      :slug => group.slug,
-      :name => group.name,
-      :channel => group.irc_channel,
-      :server => (group.ircserver ? group.ircserver.api_hash : nil),
-      :timezone => group.due_timezone,
-      :time => time,
-      :is_admin => user_can_admin_group?(auth_user, group)
-    })
+    json_response(200, group.api_hash(true))
   end
 
   # Get a list of all users in a group
