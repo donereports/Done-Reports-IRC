@@ -108,6 +108,7 @@ config.channels = function() {
   for(var i in this.groups) {
     channels.push(this.groups[i].channel);
   }
+  return channels;
 }
 
 
@@ -195,9 +196,9 @@ function on_message_received(channel, message) {
         }
       }
 
-      if(msg.data.message == "!reload users") {
-        console.log("Reloading users");
-        load_users();
+      if(msg.data.message == "!reload config") {
+        console.log("Reloading config file");
+        reload_config();
         return;
       }
 
@@ -296,7 +297,7 @@ function on_message_received(channel, message) {
           console.log(lastasked);
 
           if(lastasked) {
-            var threshold = 60 * 30;
+            var threshold = 60 * 30; // Only recognize messages directed at Loqi: if Loqi has asked in the last half hour
 
             if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
               // Record a reply to "last"
@@ -329,12 +330,18 @@ function on_message_received(channel, message) {
 
             }
 
-            // Then set the lastasked time to 0 to avoid logging another response from them in the near future
-            projects.set_lastasked("all", "past");
-          }
-
-          if(done.message) {
-            projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
+            if(done.message && done.type) {
+              // Check if they recently replied with the same type. Prevents loqi from logging extra messages.
+              // If they have replied in the last half hour already, ignore this.
+              projects.get_lastreplied(done.type, username, function(err, lastreplied){
+                console.log("  User last replied "+lastreplied)
+                if(now() - parseInt(lastreplied) >= threshold) {
+                  projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
+                } else {
+                  console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
+                }
+              });
+            }
           }
         });
       } else if((match=msg.data.message.match(/!undone (.+)/)) || (match=msg.data.message.match(/undone! (.+)/))) {
@@ -376,8 +383,9 @@ cron_func = function(){
   var currentTime = new time.Date();
 
   for(var g in config.groups) {
-    (function(group){
-
+  // Add a random delay so we don't get throttled by the IRC server for sending too many commands
+  (function(group){
+    setTimeout(function(){
       // Get the list of people in the channel right now
       get_users_in_channel(group.channel, function(members){
         console.log("Found "+Object.keys(members).length+" users in channel "+group.channel);
@@ -411,7 +419,7 @@ cron_func = function(){
             //  4) when they are at their computer (last time they spoke in IRC)
 
             // Only ask what you're working on during normal hours
-            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
+            if(true || (currentTime.getHours() >= 9 && currentTime.getHours() <= 18)) {
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
               projects.get_lastasked("doing", user.username, function(err, lastasked){
@@ -452,22 +460,32 @@ cron_func = function(){
         }
 
       });
-    })(config.groups[g]);
+
+    }, Math.round(4 + (Math.random() * 30)) * 1000); // Random delay
+  })(config.groups[g]);
   }
 
 };
 
-function load_users() {
-  // For each group, load the user list from the API
-  for(var i in config.groups) {
-    (function(index){
-      // load_users sets values in the config hash in memory
-      projects.load_users(config.groups[index].channel, function(data){
-        console.log("Loaded Users for "+config.groups[index].channel);
-        console.log(config.groups[index]);
-      });
-    })(i);
-  }
+function reload_config(callback) {
+  projects.load_config(function(data){
+    console.log("Loaded Config");
+    if(typeof callback == "function") {
+      callback();
+    }
+
+    // Join all the channels now
+    for(var i in config.groups) {
+      var channel = config.groups[i].channel;
+      console.log(channel);
+      redis.publish('out', JSON.stringify({
+        version: 1,
+        type: 'raw',
+        command: 'JOIN '+channel
+      }));
+    }
+
+  });
 }
 
 process.on('uncaughtException', function(err) {
@@ -476,18 +494,20 @@ process.on('uncaughtException', function(err) {
 });
 
 
-load_users();
+reload_config(function(){
 
-// Start the listeners and cron job now, loading the user list will take a second
-// so there's a delay on the initial cron function run to let it load first.
+  // Start the listeners and cron job now
+  sub.subscribe('in');
+  sub.on('message', on_message_received);
 
-sub.subscribe('in');
-sub.on('message', on_message_received);
+  // Set a cron job to ask users what they are doing periodically
+  new cron('*/5 * * * *', cron_func, null, true, "America/Los_Angeles");
 
-// Set a cron job to ask users what they are doing periodically
-new cron('*/5 * * * *', cron_func, null, true, "America/Los_Angeles");
-setTimeout(cron_func, 3000); // Set a delay so the API calls have time to finish first
+  // Run the cron function now
+  setTimeout(cron_func, 5000);
 
-// Reload the user list every half hour
-new cron('5,35 * * * *', load_users, null, true, "America/Los_Angeles");
+  // Reload the config file every half hour
+  new cron('5,35 * * * *', reload_config, null, true, "America/Los_Angeles");
+
+});
 

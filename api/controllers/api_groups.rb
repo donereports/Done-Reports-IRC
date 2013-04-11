@@ -172,11 +172,9 @@ class Controller < Sinatra::Base
       due_time: (params[:time] ? DateTime.parse("2000-01-01 #{params[:time]}:00") : DateTime.parse('2000-01-01 21:00:00')),
       due_timezone: (params[:timezone] || 'America/Los_Angeles'),
       email_group_members: params[:email_members] || true,
-      recipients: (params[:recipients].nil? ? '' : array_from_input(params[:recipients]).join(',')),
+      email_recipient: (params[:recipients].nil? ? '' : array_from_input(params[:recipients]).join(',')),
       send_reminder: 2,
-      github_token: SecureRandom.urlsafe_base64(12),
-      zenircbot_url: SiteConfig.zenircbot_url,
-      zenircbot_token: SiteConfig.zenircbot_token
+      github_token: SecureRandom.urlsafe_base64(12)
     })
 
     zone = Timezone::Zone.new :zone => group.due_timezone

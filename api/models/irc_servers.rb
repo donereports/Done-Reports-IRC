@@ -12,6 +12,13 @@ class Ircserver
   property :ssl, Boolean, :default => false
   property :server_password, String, :length => 255
 
+  # Token for the bot to retrieve config data
+  property :zenircbot_configtoken, String, :length => 100
+
+  # Bot config for sending messages down to the bot
+  property :zenircbot_url, String, :length => 255 # URL of the zenircbot web-proxy service
+  property :zenircbot_token, String, :length => 100 # Optional auth token for the web-proxy service
+
   property :created_at, DateTime
   property :updated_at, DateTime
 

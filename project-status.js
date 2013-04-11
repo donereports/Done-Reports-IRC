@@ -172,7 +172,13 @@ ProjectStatus.prototype.get_lastasked = function(type, username, callback) {
 ProjectStatus.prototype.set_lastasked = function(type, username) {
   var self = this;
 
-  self.redis.set(self.rkey("lastasked-"+type+"-"+username), now(), function(){});
+  if(type == "all") {
+    for(t in ["done","doing","future","blocking","hero"]) {
+      self.redis.set(self.rkey("lastasked-"+t+"-"+username), now(), function(){});
+    }
+  } else {
+    self.redis.set(self.rkey("lastasked-"+type+"-"+username), now(), function(){});
+  }
 }
 
 
@@ -268,10 +274,10 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
 
   try {
     request({
-      url: group.api.url+'/api/report/'+(type == 'remove' ? 'remove' : 'new'),
+      url: self.config.api_url+'/api/report/'+(type == 'remove' ? 'remove' : 'new'),
       method: 'post',
       form: {
-        token: group.api.token,
+        token: group.token,
         username: username,
         type: type,
         message: message
@@ -306,20 +312,14 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
   }
 }
 
-ProjectStatus.prototype.load_users = function(channel, callback) {
+ProjectStatus.prototype.load_config = function(callback) {
   var self = this;
-
-  var group = self.config.group_for_channel(channel);
-
-  if(group == false) {
-    return false;
-  }
 
   try {
     request({
-      url: group.api.url+'/api/group/config',
+      url: self.config.api_url+'/api/bot/config',
       qs: {
-        token: group.api.token
+        token: self.config.configtoken
       }
     }, function(error, response, body){
       if(error) {
@@ -334,9 +334,8 @@ ProjectStatus.prototype.load_users = function(channel, callback) {
       } else {
         try {
           var data = JSON.parse(body);
-          if(data.users) {
-            self.config.groups[self.config.group_index_for_channel(channel)].timezone = data.timezone
-            self.config.groups[self.config.group_index_for_channel(channel)].users = data.users
+          if(data.groups) {
+            self.config.groups = data.groups;
             callback(data);
           } else {
             callback({
@@ -371,10 +370,10 @@ ProjectStatus.prototype.add_github_hook = function(channel, repo_url, callback) 
 
   try {
     request({
-      url: group.api.url+'/api/github_hook/add',
+      url: self.config.api_url+'/api/github_hook/add',
       method: 'post',
       form: {
-        token: group.api.token,
+        token: group.token,
         repo_url: repo_url
       }
     }, function(error, response, body){

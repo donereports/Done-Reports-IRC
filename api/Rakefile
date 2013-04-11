@@ -311,7 +311,10 @@ namespace :report do
         puts email_text
         puts "------"
 
-        recipients = group.email_recipient.split(",")
+        recipients = []
+
+        recipients = group.email_recipient.split(",") unless group.email_recipient.nil?
+
         if group.email_group_members
           group.users.each do |user| 
             recipients << user.email

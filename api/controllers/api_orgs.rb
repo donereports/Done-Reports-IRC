@@ -46,7 +46,8 @@ class Controller < Sinatra::Base
       :hostname => params[:hostname],
       :port => params[:port],
       :ssl => params[:ssl],
-      :server_password => params[:password]
+      :server_password => params[:password],
+      :zenircbot_configtoken => SecureRandom.urlsafe_base64(32)
     })
 
     json_response(200, {

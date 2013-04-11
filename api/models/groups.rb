@@ -19,8 +19,6 @@ class Group
   property :email_recipient, String, :length => 255  # Additional email addresses to send the reports to
 
   property :irc_channel, String, :length => 100
-  property :zenircbot_url, String, :length => 255 # URL of the zenircbot web-proxy service
-  property :zenircbot_token, String, :length => 100 # Optional auth token for the web-proxy service
 
   property :github_organization, String, :length => 100
   property :github_access_token, String, :length => 255
@@ -64,6 +62,6 @@ class Group
   end
 
   def send_irc_message(message)
-    RestClient.post "#{zenircbot_url}channel/#{URI.encode_www_form_component irc_channel}", :message => message, :token => zenircbot_token
+    RestClient.post "#{ircserver.zenircbot_url}channel/#{URI.encode_www_form_component irc_channel}", :message => message, :token => ircserver.zenircbot_token
   end
 end

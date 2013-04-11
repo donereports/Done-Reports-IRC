@@ -34,6 +34,20 @@ class Controller < Sinatra::Base
     user
   end
 
+  def load_server(token)
+    if token == "" or token == nil
+      halt json_error(200, {:error => 'token_required', :error_description => 'Must provide a token'})
+    end
+
+    server = Ircserver.first :zenircbot_configtoken => token
+
+    if server.nil?
+      halt json_error(200, {:error => 'not_found', :error_description => 'No server found for the token provided'})
+    end
+
+    server
+  end
+
 =begin
   `POST /api/report/new`
 
@@ -134,6 +148,35 @@ class Controller < Sinatra::Base
     end
 
     json_response(200, data)
+  end
+
+  get '/api/bot/config' do
+    server = load_server params[:token]
+
+    data = {
+      :groups => []
+    }
+
+    server.groups.each do |group|
+      groupInfo = {
+        channel: group.irc_channel,
+        timezone: group.due_timezone,
+        token: group.token,
+        users: []
+      }
+
+      group.users(:active => 1).each do |user|
+        userInfo = {
+          username: user.username,
+          nicks: (user.nicks ? user.nicks.split(',') : [])
+        }
+        groupInfo[:users] << userInfo
+      end
+
+      data[:groups] << groupInfo
+    end
+
+    json_response 200, data
   end
 
 end
