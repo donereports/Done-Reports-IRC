@@ -92,6 +92,8 @@ class Controller < Sinatra::Base
     group.name = params[:name] if params[:name]
     group.due_time = DateTime.parse("2000-01-01 #{params[:time]}:00") if params[:time]
     group.due_timezone = params[:timezone] if params[:timezone]
+    group.email_group_members = params[:email_members] if !params[:email_members].nil?
+    group.email_recipient = array_from_input(params[:recipients]).join(',') if !params[:recipients].nil?
     group.save
 
     json_response(200, group.api_hash(true))
@@ -169,6 +171,8 @@ class Controller < Sinatra::Base
       due_day: 'every',
       due_time: (params[:time] ? DateTime.parse("2000-01-01 #{params[:time]}:00") : DateTime.parse('2000-01-01 21:00:00')),
       due_timezone: (params[:timezone] || 'America/Los_Angeles'),
+      email_group_members: params[:email_members] || true,
+      recipients: (params[:recipients].nil? ? '' : array_from_input(params[:recipients]).join(',')),
       send_reminder: 2,
       github_token: SecureRandom.urlsafe_base64(12),
       zenircbot_url: SiteConfig.zenircbot_url,

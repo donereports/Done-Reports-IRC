@@ -4,6 +4,18 @@ class Controller < Sinatra::Base
     redirect 'http://donereports.com/'
   end
 
+  def array_from_input(input)
+    return nil if input.nil?
+
+    if input.class == String
+      input.split(',')
+    elsif input.class == Array
+      input
+    else
+      input
+    end
+  end
+
   def json_error(code, data)
     if params[:callback]
       response = "#{params[:callback]}(#{data.to_json})"
