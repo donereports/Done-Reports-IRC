@@ -311,8 +311,18 @@ namespace :report do
         puts email_text
         puts "------"
 
+        recipients = group.email_recipient.split(",")
+        if group.email_group_members
+          group.users.each do |user| 
+            recipients << user.email
+          end
+        end
+
+        puts "Sending to: "
+        puts recipients
+
         # Send the email via Amazon SES now
-        ses.send_email :to => group.email_recipient.split(","),
+        ses.send_email :to => recipients,
           :source => 'done@geoloqi.com',
           :subject => "Report for #{group.name}",
           :text_body => email_text,
