@@ -31,17 +31,18 @@ class Report
       # Get the last report
       last = Report.first(:group_id => group.id, :date_completed.not => nil, :order => [:date_started.desc])
 
+      puts "Creating a new report"
+
+      zone = Timezone::Zone.new :zone => group.due_timezone
+
+      now = Time.now # UTC
+      puts "Now (UTC) #{now}"
+
+      local = now.localtime(zone.utc_offset)
+      puts "Now (Local) #{local}"
+      puts "Group due time #{group.due_time}, interval: #{group.due_day}"
+
       if group.due_day == "every"
-        puts "Creating a new report"
-        zone = Timezone::Zone.new :zone => group.due_timezone
-
-        now = Time.now # UTC
-        puts "Now (UTC) #{now}"
-
-        local = now.localtime(zone.utc_offset)
-        puts "Now (Local) #{local}"
-
-        puts "Group due time #{group.due_time}"
 
         # Create the due date in the local timezone
         due = Time.new(local.year, local.month, local.day, group.due_time.hour, group.due_time.minute, group.due_time.second, zone.utc_offset)
@@ -54,14 +55,28 @@ class Report
 
         puts "Due: #{due} (#{due.utc})"
 
-        if group.send_reminder > 0
-          reminder = due - (group.send_reminder * 60 * 60)
-        else
-          reminder = nil
+      else
+        # For weekly reports, figure out the due date based on the day of the week specified here
+
+        # Create the due date in the local timezone set to today
+        due = Time.new(local.year, local.month, local.day, group.due_time.hour, group.due_time.minute, group.due_time.second, zone.utc_offset)
+
+        # increment the day until the day of the week matches the desired day of the week
+        unless ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].include? group.due_day
+          raise "Invalid due_day: #{group.due_day}"
         end
 
+        while due.strftime('%A').downcase != group.due_day
+          due = Time.new(due.year, due.month, due.day+1, group.due_time.hour, group.due_time.minute, group.due_time.second)
+        end
+
+        puts "Due: #{due} (#{due.utc})"
+      end
+
+      if group.send_reminder > 0
+        reminder = due - (group.send_reminder * 60 * 60)
       else
-        # TODO: For weekly reports, figure out the due date based on the day of the week specified here
+        reminder = nil
       end
 
       # Store dates in the database in UTC

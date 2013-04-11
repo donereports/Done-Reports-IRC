@@ -375,12 +375,12 @@ namespace :report do
   end
 
   task :test do
-    org = Account.first :id => 1
-    group = Group.first :id => 1
+    org = Org.first :id => 1
+    group = Group.first :id => 27
 
     report = Report.current_report(group)
 
-    #puts report.inspect
+    puts report.inspect
   end
 end
 
