@@ -419,7 +419,7 @@ cron_func = function(){
             //  4) when they are at their computer (last time they spoke in IRC)
 
             // Only ask what you're working on during normal hours
-            if(true || (currentTime.getHours() >= 9 && currentTime.getHours() <= 18)) {
+            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
               projects.get_lastasked("doing", user.username, function(err, lastasked){
