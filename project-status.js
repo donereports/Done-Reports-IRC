@@ -194,6 +194,7 @@ ProjectStatus.prototype.set_lastreplied = function(type, username) {
   var self = this;
 
   self.redis.set(self.rkey("lastreplied-"+type+"-"+username), now(), function(){});
+  self.redis.set(self.rkey("lastreplied-any-"+username), now(), function(){});
 }
 
 

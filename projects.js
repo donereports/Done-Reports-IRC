@@ -335,7 +335,7 @@ function on_message_received(channel, message) {
               // If they have replied in the last half hour already, ignore this.
               projects.get_lastreplied(done.type, username, function(err, lastreplied){
                 console.log("  User last replied "+lastreplied)
-                if(now() - parseInt(lastreplied) >= threshold) {
+                if((lastreplied == null) || (now() - parseInt(lastreplied) >= threshold)) {
                   projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
                 } else {
                   console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
@@ -423,7 +423,7 @@ cron_func = function(){
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
               projects.get_lastasked("doing", user.username, function(err, lastasked){
-                projects.get_lastreplied("doing", user.username, function(err, lastreplied){
+                projects.get_lastreplied("any", user.username, function(err, lastreplied){
                   console.log("  "+group.channel+" Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
                     + (now()-lastreplied) + " seconds ago");
 
