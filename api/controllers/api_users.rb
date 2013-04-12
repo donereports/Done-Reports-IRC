@@ -154,11 +154,13 @@ class Controller < Sinatra::Base
     # If the user is not an org admin, allow them to add a user when adding directly to a group
     if !user_can_admin_org?(auth_user, org)
       # If a group is specified, but the user is not a group admin, deny access
-      if group && !user_can_admin_group?(auth_user, group)
-        halt json_error(200, {
-          :error => 'forbidden', 
-          :error_description => 'You are not an admin for this group'
-        })
+      if group 
+        if !user_can_admin_group?(auth_user, group)
+          halt json_error(200, {
+            :error => 'forbidden', 
+            :error_description => 'You are not an admin for this group'
+          })
+        end
       else 
         # Else no group is specified, or the user cannot admin the group
         halt json_error(200, {
