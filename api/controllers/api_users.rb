@@ -148,26 +148,29 @@ class Controller < Sinatra::Base
       })
     end
 
+    # Support adding this user directly to a group upon creation, optionally
+    group = Group.first :irc_channel => "##{params[:group]}", :org => org
+
+    # If the user is not an org admin, allow them to add a user when adding directly to a group
     if !user_can_admin_org?(auth_user, org)
-      halt json_error(200, {
-        :error => 'forbidden',
-        :error_description => 'Only organization admins can add users'
-      })
+      # If a group is specified, but the user is not a group admin, deny access
+      if group && !user_can_admin_group?(auth_user, group)
+        halt json_error(200, {
+          :error => 'forbidden', 
+          :error_description => 'You are not an admin for this group'
+        })
+      else 
+        # Else no group is specified, or the user cannot admin the group
+        halt json_error(200, {
+          :error => 'forbidden',
+          :error_description => 'Only organization admins and group admins can add users'
+        })
+      end
     end
 
     user = User.first({
       :username => params[:username]
     })
-
-    # Support adding this user directly to a group upon creation, optionally
-    group = Group.first :irc_channel => "##{params[:group]}", :org => org
-
-    if group && !user_can_admin_group?(auth_user, group)
-      halt json_error(200, {
-        :error => 'forbidden', 
-        :error_description => 'You are not an admin for this group'
-      })
-    end
 
     if user.nil?
       user_org = Org.create({
