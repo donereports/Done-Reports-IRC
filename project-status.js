@@ -35,8 +35,7 @@ ProjectStatus.prototype.ask_doing = function(channel, username, nick) {
 
   var questions = [
     "What have you been working on?",
-    "What project are you working on?",
-    "What are you working on?",
+    "What are you working on?"
   ];
 
   self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
