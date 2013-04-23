@@ -333,14 +333,16 @@ function on_message_received(channel, message) {
             if(done.message && done.type) {
               // Check if they recently replied with the same type. Prevents loqi from logging extra messages.
               // If they have replied in the last half hour already, ignore this.
-              projects.get_lastreplied(done.type, username, function(err, lastreplied){
-                console.log("  User last replied "+lastreplied)
-                if((lastreplied == null) || (now() - parseInt(lastreplied) >= threshold)) {
-                  projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
-                } else {
-                  console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
-                }
-              });
+              (function(done){
+                projects.get_lastreplied(done.type, username, function(err, lastreplied){
+                  console.log("  User last replied "+lastreplied)
+                  if((lastreplied == null) || (now() - parseInt(lastreplied) >= threshold)) {
+                    projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
+                  } else {
+                    console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
+                  }
+                });
+              })(done);
             }
           }
         });
