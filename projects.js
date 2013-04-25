@@ -508,8 +508,8 @@ reload_config(function(){
   // Run the cron function now
   setTimeout(cron_func, 5000);
 
-  // Reload the config file every half hour
-  new cron('5,35 * * * *', reload_config, null, true, "America/Los_Angeles");
+  // Reload the config file regularly
+  new cron('0,15,30,45 * * * *', reload_config, null, true, "America/Los_Angeles");
 
 });
 
