@@ -247,8 +247,8 @@ namespace :report do
 
           # Gather all the entries for this report, grouped by type
           types = [
-            {:type => 'done',     :title => 'What did you do?', :entries => []},
             {:type => 'doing',    :title => 'What are you working on?', :entries => []},
+            {:type => 'done',     :title => 'What did you do?', :entries => []},
             {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
             {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
             {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
