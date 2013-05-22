@@ -212,6 +212,42 @@ namespace :report do
     group = report.group
     org = group.org
 
+    report_types = [
+      {:type => 'doing',    :title => 'What are you working on?', :entries => []},
+      {:type => 'done',     :title => 'What did you do?', :entries => []},
+      {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
+      {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
+      {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
+      {:type => 'unknown',  :title => 'Other Updates', :entries => []},
+    ]
+    help_sentences = {
+      'doing' => [
+        'To share things in progress, try "!doing"',
+        'If you\'re working on something but not done yet, you can say "!doing something"',
+      ],
+      'done' => [
+        'Say "!done wrote a blog post" to share what you\'ve finished today',
+        'Say "!done ticket #445" to say what you finished today',
+      ],
+      'future' => [
+        'You can say "!todo take over the world" to share what you plan on working on tomorrow',
+        'To share what you plan to do tomorrow, you can say things like "!todo more testing"',
+      ],
+      'blocking' => [
+        'If you\'re stuck on something, say "!blocking Internet is down" to share it',
+        'If something is blocking you, let everyone know by saying "!blocking not enough time"',
+      ],
+      'hero' => [
+        'Did someone make your day? Thank them with "!hero Loqi for being awesome"',
+        '"!hero Loqi for always listening" is a great way to make someone\'s day :)',
+      ],
+      'quote' => [
+        'Did someone say something funny? Jot it down with !quote "Some super funny text" -a funny guy',
+        'Use \'!quote "Some super funny text" -a funny guy\' to jot down an awesome quote from someone"',
+        'Did you hear a useful quote at a conference? Share it with \'!quote "We promise not to screw it up." -marissa meyer',
+      ]
+    }
+
     # Create the object that will be passed into the email erb template
     email_data = {
       :group => nil,
@@ -246,14 +282,7 @@ namespace :report do
           num_entries = 0
 
           # Gather all the entries for this report, grouped by type
-          types = [
-            {:type => 'doing',    :title => 'What are you working on?', :entries => []},
-            {:type => 'done',     :title => 'What did you do?', :entries => []},
-            {:type => 'future',   :title => 'What is your plan for tomorrow?', :entries => []},
-            {:type => 'blocking', :title => 'What is blocking you?', :entries => []},
-            {:type => 'hero',     :title => 'Who is your hero?', :entries => []},
-            {:type => 'unknown',  :title => 'Other Updates', :entries => []},
-          ]
+          types = report_types.clone
           types.each do |type|
             entries = report.entries.all(:type => type[:type], :user => user)
             if entries.count > 0 
@@ -300,17 +329,6 @@ namespace :report do
 
       if email_data[:users].count + email_data[:quotes].count > 0
 
-        # Merge the data with the email template in email.erb
-        puts "------"
-        template = Erubis::Eruby.new File.read 'views/email.erb'
-        email_html = template.result email_data
-        puts email_html
-
-        template_text = Erubis::Eruby.new File.read 'views/email_text.erb'
-        email_text = template_text.result email_data
-        puts email_text
-        puts "------"
-
         recipients = []
 
         recipients = group.email_recipient.split(",") unless group.email_recipient.nil?
@@ -320,6 +338,34 @@ namespace :report do
             recipients << user.email
           end
         end
+
+        # Find all of the types that are not used in this report
+        types_used = email_data[:users].map{|u| u[:types].map{|t| t[:entries].length > 0 ? t[:type] : nil}.compact}.flatten
+        types_unused = report_types.map{|t| t[:type]} - types_used
+
+        # Choose one to highlight in this email
+        highlight_type = types_unused.sample
+
+        # Choose a random sentence for this type and include in the footer of the email
+        if help_sentences[highlight_type] && [0,1].sample == 0
+          email_data[:help_text] = help_sentences[highlight_type].sample
+        else
+          email_data[:help_text] = nil
+        end
+
+        email_data[:recipients] = recipients
+
+        # Merge the data with the email template in email.erb
+        puts "------"
+        template = Erubis::Eruby.new File.read 'views/email.erb'
+        email_html = template.result email_data
+        puts email_html
+        puts "------"
+
+        template_text = Erubis::Eruby.new File.read 'views/email_text.erb'
+        email_text = template_text.result email_data
+        puts email_text
+        puts "------"
 
         puts "Sending to: "
         puts recipients
@@ -331,6 +377,8 @@ namespace :report do
           :text_body => email_text,
           :html_body => email_html
 
+      else
+        puts "No data in this report, not sending"
       end
 
     # If the current time is past the reminder time, send out reminder emails

@@ -1,32 +1,54 @@
-<div style="background-color: #d6d6d6; padding: 30px 10px; text-align: center; font-size: 22pt;">
-  Here's what <span style="color: #e37b2f;"><%= group.name %></span> has done recently.
-</div>
+<html>
+<body style="margin: 0; padding: 0;">
 
-<div style="margin-top: 20px;">
-  This report was sent on <%= report_localtime.strftime('%A, %B %-d, %Y at %I:%M%P') %>.
-</div>
+  <div style="background-color: #f0e9d9; padding: 30px 10px; text-align: center; font-size: 22pt;">
+    Here's what <span style="color: #cd7d86;"><%= group.name %></span> has done recently.
+  </div>
 
-<% users.each do |user| %>  
-  <h3 style="font-size: 18pt; color: #e37b2f; font-weight: bold;"><%= user[:user][:username] %></h3>
+  <div style="padding: 20px 10px; background-color: #ffffff;">
 
-  <% user[:types].keep_if{|t| t[:entries].count > 0}.each do |type| %>
-    <div style="margin-left: 20px;">
-      <h4><%= type[:title] %></h4>
+    <div>
+      This report was generated on <%= report_localtime.strftime('%A, %B %-d, %Y at %I:%M%P') %>.
+    </div>
+
+    <% users.each do |user| %>  
+      <h3 style="font-size: 18pt; color: #cd7d86; font-weight: bold;"><%= user[:user][:username] %></h3>
+
+      <% user[:types].keep_if{|t| t[:entries].count > 0}.each do |type| %>
+        <div style="margin-left: 20px;">
+          <h4><%= type[:title] %></h4>
+          <ul>
+            <% type[:entries].each do |entry| %>
+              <li><%= entry.message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+    <% end %>
+
+    <% if quotes.count > 0 %>
+      <h3 style="font-size: 18pt; color: #cd7d86; font-weight: bold;">quotes</h3>
       <ul>
-        <% type[:entries].each do |entry| %>
-          <li><%= entry.message %></li>
-        <% end %>
+      <% quotes.each do |quote| %>
+        <li><%= quote.message %> <span style="font-size: 80%; color: #777;">(via <%= quote.user.username %>)</span></li>
+      <% end %>
       </ul>
+    <% end %>
+
+  </div>
+
+  <% if help_text %>
+    <div style="padding: 30px 0; background-color: #f0e9d9;">
+      <h3 style="font-size: 18pt; color: #cd7d86; font-weight: bold; margin-left: 10px; margin-top: 0;">Did you know?</h3>
+
+      <div style="margin-left: 10px; margin-right: 10px;"><%= help_text %></div>
     </div>
   <% end %>
 
-<% end %>
+  <div style="font-size: 9pt; text-align: center; padding-top: 10px">
+    This email was sent to <%= recipients.join(', ') %> on behalf of the "<%= group.name %>" team.
+  </div>
 
-<% if quotes.count > 0 %>
-  <h3 style="font-size: 18pt; color: #e37b2f; font-weight: bold;">quotes</h3>
-  <ul>
-  <% quotes.each do |quote| %>
-    <li><%= quote.message %> <span style="font-size: 80%; color: #777;">(via <%= quote.user.username %>)</span></li>
-  <% end %>
-  </ul>
-<% end %>
+</body>
+</html>

@@ -18,3 +18,9 @@ This report was sent on <%= report_localtime.strftime('%A, %B %-d, %Y at %I:%M%P
    * <%= quote.message %> (via <%= quote.user.username %>)
   <% end %>
 <% end %>
+
+<% if help_text %>
+Did you know?
+
+<%= help_text %>
+<% end %>
