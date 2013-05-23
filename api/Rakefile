@@ -282,7 +282,7 @@ namespace :report do
           num_entries = 0
 
           # Gather all the entries for this report, grouped by type
-          types = report_types.clone
+          types = JSON.parse report_types.to_json, :symbolize_names => true  # Hack around needing to make a deep clone
           types.each do |type|
             entries = report.entries.all(:type => type[:type], :user => user)
             if entries.count > 0 
