@@ -318,7 +318,7 @@ class Controller < Sinatra::Base
     when "pull_request_review_comment"
       summary = Sanitize.clean(payload["comment"]["body"])[0..140]
       if payload["comment"]["_links"]
-        comment_url = payload["comment"]["_links"]["html"]
+        comment_url = payload["comment"]["_links"]["html"]["href"]
       else
         comment_url = ''
       end
