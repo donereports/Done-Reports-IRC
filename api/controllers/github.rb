@@ -317,13 +317,18 @@ class Controller < Sinatra::Base
 
     when "pull_request_review_comment"
       summary = Sanitize.clean(payload["comment"]["body"])[0..140]
+      if payload["comment"]["_links"]
+        comment_url = payload["comment"]["_links"]["html"]
+      else
+        comment_url = ''
+      end
       Commit.create({
         type: type,
         repo: repo,
         user: user,
         date: now,
         text: "#{username} commented #{summary}",
-        link: payload["comment"]["url"]
+        link: comment_url
       })
     when "push"
       events = []
