@@ -1,8 +1,0 @@
-production:
-  database_url: "mysql://user:pass@127.0.0.1/status_reports"
-  aws_key_id: ""
-  aws_secret: ""
-  base_url: "http://localhost:9393/"
-  token_secret: ""
-  github_id: ""
-  github_secret: ""
