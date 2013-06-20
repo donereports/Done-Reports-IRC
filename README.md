@@ -1,8 +1,7 @@
-IRC Project Status Updates
-==========================
+Done Reports
+============
 
-Collection
-==========
+## Collection
 
 The goal of this project is to collect information about what people are working with minimal psychological stress and overhead on everyone.
 
@@ -15,9 +14,7 @@ IRC is a great mechanism to collect data since it is by nature more conversation
 The goal is to collect enough information from people to send daily updates to everyone. Since we are traveling a lot in the near future, we need a system to facilitate sharing progress updates quickly and easily while being geographically distributed.
 
 
-
-IRC
-===
+## IRC Bot
 
 ### Commands
 
@@ -67,67 +64,6 @@ this message as a PM to the IRC bot so you don't need to clutter the channel
 with it if you're using it for a bunch of repos in a row. 
 
 If you send this command in a channel, don't include the #channel on the end.
-
-
-API
-===
-
-### `POST /api/report/new`
-
-* token - The auth token for the group
-* username - The username sending the report
-* type - past, future, blocking, hero, unknown
-* message - The text of the report
-
-The server knows the current open report where responses are being collected.
-
-Post a new entry to the current open report. (TODO: This should be renamed to /api/entry/new)
-
-
-### `POST /api/report/remove`
-
-* token - The auth token for the group
-* username - The username sending the report
-* message - The text of the report
-
-Remove an entry. Only entries from an open report can be removed. Entries are matched on the entry
-text, not by ID, so you must pass in the exact text of the entry to remove.
-
-
-### `POST /api/user/new`
-
-Bold fields are required. All others are optional.
-
-* **token** - The auth token for the group
-* **username** - A unique username for the user. If a user exists with this username already, the record is updated
-* **email** - The email address of the user.
-* nicks - A comma-separated string of alternate IRC nicks this user may be using.
-* github_username - The user's Github username
-* github_email - The user's email address in commits on Github
-
-
-### `POST /hook/github`
-
-* ?github_token=xxxxx - The internal Github auth token for the group
-* ... whatever Github sends
-
-This endpoint handles Github's event hooks. Note this is different from the standard git post-commit hooks. A full list of events sent by Github can be [found here](http://developer.github.com/v3/activity/events/types/).
-
-
-### `POST /api/github_hook/add`
-
-* token - The auth token for the group
-* repo_url - The HTTP URL of the Github repositry
-
-Add the appropriate Github hook to the specified repository. Will fail if the repo is not a Github URL.
-
-
-### `GET /api/group/config`
-
-* token - The auth token for the group
-
-Returns a JSON config block for the group to be put into the IRC bot config file.
-
 
 
 ## License
