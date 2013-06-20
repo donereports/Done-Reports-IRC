@@ -1,18 +1,4 @@
 {
-  "groups": [
-    {
-      "channel": "#portland",
-      "api": {
-        "url": "http://127.0.0.1:9393",
-        "token": "12345678901234567890123456789012"
-      }
-    },
-    {
-      "channel": "#dc",
-      "api": {
-        "url": "http://127.0.0.1:9393",
-        "token": "09876543210987654321098765432109"
-      }
-    }
-  ]
+  "api_url": "https://api.donereports.com",
+  "configtoken": "xxxxxxxxxxxxxxxxxxx"
 }

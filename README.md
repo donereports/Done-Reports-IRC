@@ -1,17 +1,15 @@
 Done Reports
 ============
 
-## Collection
+## Setup
 
-The goal of this project is to collect information about what people are working with minimal psychological stress and overhead on everyone.
+This is written as a ZenIRCBot service. To learn more about ZenIRCBot, check out the [Github page](https://github.com/zenirc) and [documentation](http://zenircbot.readthedocs.org/en/latest/).
 
-Everybody on the team is already on IRC all the time, and also has their email inbox open constantly. The most frictionless interface must be one of those two.
+You'll need a config token to put into the config file. There is currently no good way other than emailing us to get one right now! That will come soon.
 
-The problem with email is that people will start to treat it as a burden. We get tons of email in our inboxes all the time, and this should not be something that "needs attention" or "needs to be replied to". We want a quick and short reply to the prompts, and we don't want the prompt to get lost in an inbox of other email. 
+Sign up for an account at https://donereports.com and you can begin configuring your groups.
 
-IRC is a great mechanism to collect data since it is by nature more conversational than email. By using IRC, we can make a bot that appears to be asking questions like a regular person, and it should feel like having a short conversation rather than filling out a report.
-
-The goal is to collect enough information from people to send daily updates to everyone. Since we are traveling a lot in the near future, we need a system to facilitate sharing progress updates quickly and easily while being geographically distributed.
+Copy `config.json.template` to `config.json` and put in your config token. When the bot starts, it will load all the group info from the API and should start asking you what you're doing in your IRC channel!
 
 
 ## IRC Bot
@@ -64,6 +62,21 @@ this message as a PM to the IRC bot so you don't need to clutter the channel
 with it if you're using it for a bunch of repos in a row. 
 
 If you send this command in a channel, don't include the #channel on the end.
+
+
+## Collection
+
+The goal of this project is to collect information about what people are working with minimal psychological stress and overhead on everyone.
+
+Everybody on the team is already on IRC all the time, and also has their email inbox open constantly. The most frictionless interface must be one of those two.
+
+The problem with email is that people will start to treat it as a burden. We get tons of email in our inboxes all the time, and this should not be something that "needs attention" or "needs to be replied to". We want a quick and short reply to the prompts, and we don't want the prompt to get lost in an inbox of other email. 
+
+IRC is a great mechanism to collect data since it is by nature more conversational than email. By using IRC, we can make a bot that appears to be asking questions like a regular person, and it should feel like having a short conversation rather than filling out a report.
+
+The goal is to collect enough information from people to send daily updates to everyone. Since we are traveling a lot in the near future, we need a system to facilitate sharing progress updates quickly and easily while being geographically distributed.
+
+
 
 
 ## License
