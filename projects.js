@@ -182,8 +182,8 @@ function on_message_received(channel, message) {
 
     if(typeof msg.data.channel == 'undefined' || msg.data.channel.substring(0,1) != "#") {
       // Catch PMs for !addhook commands
-      if(msg.data.message.match(/^!addhook (.+)/)) {
-        if(match=msg.data.message.match(/^!addhook (https?:\/\/github.com\/[^\/]+\/[^\/\.]+) (#[a-z]+)/)) {
+      if(msg.data.message.match(/^!addhook (https:?\/\/github\.com\/.+)/)) {
+        if(match=msg.data.message.match(/^!addhook (https?:\/\/github\.com\/[^\/]+\/[^\/\.]+) (#[a-z]+)/)) {
           // Check if channel is one we know about in the config file
           var group = config.group_for_channel(match[2]);
           if(group == false) { 
@@ -237,7 +237,7 @@ function on_message_received(channel, message) {
         type: false
       };
 
-      if(match=msg.data.message.match(/^!addhook (.+)/)) {
+      if(match=msg.data.message.match(/^!addhook (https:?\/\/github\.com\/.+)/)) {
         console.log("Adding Github hook: ["+match[1]+"]");
         if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/\.]+$/)) {
           add_hook(match[1], msg.data.channel, msg.data.channel);
