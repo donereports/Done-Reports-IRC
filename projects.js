@@ -65,6 +65,10 @@ config.group_index_for_channel = function(channel) {
     if(group.channel.toLowerCase() == channel.toLowerCase()) {
       return i;
     }
+    // Also look for channel aliases
+    if(group.aliases.indexOf(channel.toLowerCase()) != -1) {
+      return i;
+    }
   }
   return false;
 }
@@ -180,6 +184,8 @@ function on_message_received(channel, message) {
       return;
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    // Private messages (channel is undefined or doesn't start with #)
     if(typeof msg.data.channel == 'undefined' || msg.data.channel.substring(0,1) != "#") {
       // Catch PMs for !addhook commands
       if(msg.data.message.match(/^!addhook (https:?\/\/github\.com\/.+)/)) {
@@ -213,6 +219,8 @@ function on_message_received(channel, message) {
       }
       return;
     }
+    //////////////////////////////////////////////////////////////////////////
+
 
     var user = config.user(username);
 
