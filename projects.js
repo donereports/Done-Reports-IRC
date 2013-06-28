@@ -299,7 +299,7 @@ function on_message_received(channel, message) {
       } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 
-        (function(done){
+        (function(done, line){
           // Check if we recently asked them a question, and if so, record a reply
           projects.get_lastasked("all", username, function(lastasked){
             console.log("Last asked:");
@@ -310,27 +310,27 @@ function on_message_received(channel, message) {
 
               if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
                 // Record a reply to "last"
-                done.message = match[1];
+                done.message = line;
                 done.type = "done";
 
               } else if(lastasked.doing && now() - parseInt(lastasked.doing) < threshold) {
                 // Record a reply to "future"
-                done.message = match[1];
+                done.message = line;
                 done.type = "doing";
 
               } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
                 // Record a reply to "future"
-                done.message = match[1];
+                done.message = line;
                 done.type = "future";
 
               } else if(lastasked.blocking && now() - parseInt(lastasked.blocking) < threshold) {
                 // Record a reply to "blocking"
-                done.message = match[1];
+                done.message = line;
                 done.type = "blocking";
 
               } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
                 // Record a reply to "hero"
-                done.message = match[1];
+                done.message = line;
                 done.type = "hero";
 
               } else {
@@ -355,7 +355,7 @@ function on_message_received(channel, message) {
               }
             }
           });
-        })(done);
+        })(done, match[1]);
 
       } else if((match=msg.data.message.match(/!undone (.+)/)) || (match=msg.data.message.match(/undone! (.+)/))) {
         console.log(username + " undid something: " + match[1]);
