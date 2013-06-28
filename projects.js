@@ -299,61 +299,64 @@ function on_message_received(channel, message) {
       } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
 
-        // Check if we recently asked them a question, and if so, record a reply
-        projects.get_lastasked("all", username, function(lastasked){
-          console.log("Last asked:");
-          console.log(lastasked);
+        (function(done){
+          // Check if we recently asked them a question, and if so, record a reply
+          projects.get_lastasked("all", username, function(lastasked){
+            console.log("Last asked:");
+            console.log(lastasked);
 
-          if(lastasked) {
-            var threshold = 60 * 30; // Only recognize messages directed at Loqi: if Loqi has asked in the last half hour
+            if(lastasked) {
+              var threshold = 60 * 30; // Only recognize messages directed at Loqi: if Loqi has asked in the last half hour
 
-            if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
-              // Record a reply to "last"
-              done.message = match[1];
-              done.type = "done";
+              if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
+                // Record a reply to "last"
+                done.message = match[1];
+                done.type = "done";
 
-            } else if(lastasked.doing && now() - parseInt(lastasked.doing) < threshold) {
-              // Record a reply to "future"
-              done.message = match[1];
-              done.type = "doing";
+              } else if(lastasked.doing && now() - parseInt(lastasked.doing) < threshold) {
+                // Record a reply to "future"
+                done.message = match[1];
+                done.type = "doing";
 
-            } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
-              // Record a reply to "future"
-              done.message = match[1];
-              done.type = "future";
+              } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
+                // Record a reply to "future"
+                done.message = match[1];
+                done.type = "future";
 
-            } else if(lastasked.blocking && now() - parseInt(lastasked.blocking) < threshold) {
-              // Record a reply to "blocking"
-              done.message = match[1];
-              done.type = "blocking";
+              } else if(lastasked.blocking && now() - parseInt(lastasked.blocking) < threshold) {
+                // Record a reply to "blocking"
+                done.message = match[1];
+                done.type = "blocking";
 
-            } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
-              // Record a reply to "hero"
-              done.message = match[1];
-              done.type = "hero";
+              } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
+                // Record a reply to "hero"
+                done.message = match[1];
+                done.type = "hero";
 
-            } else {
-              // done.message = match[1];
-              // done.type = "unknown";
+              } else {
+                // done.message = match[1];
+                // done.type = "unknown";
 
+              }
+
+              if(done.message && done.type) {
+                // Check if they recently replied with the same type. Prevents loqi from logging extra messages.
+                // If they have replied in the last half hour already, ignore this.
+                (function(done){
+                  projects.get_lastreplied(done.type, username, function(err, lastreplied){
+                    console.log("  User last replied "+lastreplied)
+                    if((lastreplied == null) || (now() - parseInt(lastreplied) >= threshold)) {
+                      projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
+                    } else {
+                      console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
+                    }
+                  });
+                })(done);
+              }
             }
+          });
+        })(done);
 
-            if(done.message && done.type) {
-              // Check if they recently replied with the same type. Prevents loqi from logging extra messages.
-              // If they have replied in the last half hour already, ignore this.
-              (function(done){
-                projects.get_lastreplied(done.type, username, function(err, lastreplied){
-                  console.log("  User last replied "+lastreplied)
-                  if((lastreplied == null) || (now() - parseInt(lastreplied) >= threshold)) {
-                    projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
-                  } else {
-                    console.log("  Ignoring directed message because user already replied "+(now()-parseInt(lastreplied))+" seconds ago");
-                  }
-                });
-              })(done);
-            }
-          }
-        });
       } else if((match=msg.data.message.match(/!undone (.+)/)) || (match=msg.data.message.match(/undone! (.+)/))) {
         console.log(username + " undid something: " + match[1]);
 
