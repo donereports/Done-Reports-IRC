@@ -117,6 +117,7 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
       replies.push(nick + ": Nicely done.");
       replies.push(nick + ": Nicely done!");
       replies.push(nick + ": nicely done!");
+      replies.push(nick + ": great!");
       break;
     case 'doing':
       replies.push(nick + ": great, thanks!");
@@ -139,6 +140,11 @@ ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
       replies.push(nick + ": yeah!!");
       replies.push(nick + ": yeah!");
       replies.push(nick + ": awesome!");
+    case 'share':
+      replies.push(nick + ": sweet!");
+      replies.push(nick + ": Sweet!");
+      replies.push(nick + ": yeah!");
+      replies.push(nick + ": awesome!");
       break;
   }
 
@@ -152,14 +158,15 @@ ProjectStatus.prototype.get_lastasked = function(type, username, callback) {
   var self = this;
 
   if(type == "all") {
-    self.redis.mget([self.rkey("lastasked-done-"+username),self.rkey("lastasked-doing-"+username),self.rkey("lastasked-future-"+username),self.rkey("lastasked-blocking-"+username),self.rkey("lastasked-hero-"+username)], function(err,data){
+    self.redis.mget([self.rkey("lastasked-done-"+username),self.rkey("lastasked-doing-"+username),self.rkey("lastasked-future-"+username),self.rkey("lastasked-blocking-"+username),self.rkey("lastasked-hero-"+username),self.rkey("lastasked-share-"+username)], function(err,data){
       if(data){
         callback({
           done: data[0],
           doing: data[1],
           future: data[2],
           blocking: data[3],
-          hero: data[4]
+          hero: data[4],
+          share: data[5]
         });
       }
     });

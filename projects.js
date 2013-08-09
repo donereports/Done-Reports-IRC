@@ -121,7 +121,7 @@ function now() {
 }
 
 function is_explicit_command(m) {
-  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|addhook) .+/) || m.match(/^(done|doing|todo|block|hero|undone|quote)! .+/)) {
+  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|share|addhook) .+/) || m.match(/^(done|doing|todo|block|hero|undone|share|quote)! .+/)) {
     return true;
   } else {
     return false;
@@ -255,25 +255,11 @@ function on_message_received(channel, message) {
         return;
       }
 
-      if((match=msg.data.message.match(/^done! (.+)/)) || (match=msg.data.message.match(/^!done (.+)/))) {
-        console.log(username + " finished: " + match[1]);
+      if((match=msg.data.message.match(/^(done|doing|todo|hero|share|quote)! (.+)/)) || (match=msg.data.message.match(/^!(done|doing|todo|hero|share|quote) (.+)/))) {
+        console.log(username + " " + match[1] + ": " + match[2]);
 
-        done.message = match[1];
-        done.type = "done";
-
-      } else if((match=msg.data.message.match(/^doing! (.+)/)) || (match=msg.data.message.match(/^!doing (.+)/))) {
-        console.log(username + " is doing: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "doing";
-
-      } else if((match=msg.data.message.match(/^todo! (.+)/)) || (match=msg.data.message.match(/^!todo (.+)/))) {
-        console.log(username + " will do: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "future";
+        done.message = match[2];
+        done.type = match[1];
 
       } else if((match=msg.data.message.match(/^!block(?:ing|ed)? (.+)/)) || (match=msg.data.message.match(/^block(?:ing|ed)?! (.+)/))) {
         console.log(username + " is blocked on: " + match[1]);
@@ -281,20 +267,6 @@ function on_message_received(channel, message) {
         // Record their reply
         done.message = match[1];
         done.type = "blocking";
-
-      } else if((match=msg.data.message.match(/^!hero (.+)/)) || (match=msg.data.message.match(/^hero! (.+)/))) {
-        console.log(username + "'s hero: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "hero";
-
-      } else if((match=msg.data.message.match(/^!quote (.+)/)) || (match=msg.data.message.match(/^quote! (.+)/))) {
-        console.log(username + " quoted: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "quote";
 
       } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
         console.log(username + " did something: " + match[1]);
@@ -327,6 +299,11 @@ function on_message_received(channel, message) {
                 // Record a reply to "blocking"
                 done.message = line;
                 done.type = "blocking";
+
+              } else if(lastasked.share && now() - parseInt(lastasked.share) < threshold) {
+                // Record a reply to "share"
+                done.message = line;
+                done.type = "share";
 
               } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
                 // Record a reply to "hero"
