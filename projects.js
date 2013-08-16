@@ -121,7 +121,7 @@ function now() {
 }
 
 function is_explicit_command(m) {
-  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|share|addhook) .+/) || m.match(/^(done|doing|todo|block|hero|undone|share|quote)! .+/)) {
+  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|share|shared|addhook) .+/) || m.match(/^(done|doing|todo|block|hero|undone|share|shared|quote)! .+/)) {
     return true;
   } else {
     return false;
@@ -255,11 +255,15 @@ function on_message_received(channel, message) {
         return;
       }
 
-      if((match=msg.data.message.match(/^(done|doing|todo|hero|share|quote)! (.+)/)) || (match=msg.data.message.match(/^!(done|doing|todo|hero|share|quote) (.+)/))) {
+      if((match=msg.data.message.match(/^(done|doing|todo|hero|share|shared|quote)! (.+)/)) || (match=msg.data.message.match(/^!(done|doing|todo|hero|share|shared|quote) (.+)/))) {
         console.log(username + " " + match[1] + ": " + match[2]);
 
         done.message = match[2];
         done.type = match[1];
+
+        if(done.type == "shared") {
+          done.type = "share";
+        }
 
       } else if((match=msg.data.message.match(/^!block(?:ing|ed)? (.+)/)) || (match=msg.data.message.match(/^block(?:ing|ed)?! (.+)/))) {
         console.log(username + " is blocked on: " + match[1]);
