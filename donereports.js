@@ -3,7 +3,7 @@ process.chdir(__dirname);
 var net = require('net'); 
 var dgram = require('dgram');
 var api = require('zenircbot-api');
-var projectStatus = require('./project-status.js');
+var projectStatus = require('./donereports-lib.js');
 var cron = require('cron').CronJob;
 var time = require('time');
 
