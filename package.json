@@ -1,0 +1,15 @@
+{
+    "author": "Aaron Parecki (http://aaronparecki.com)",
+    "name": "donereports",
+    "description": "Done Reports IRC Service for ZenIRCBot",
+    "version": "0.0.1",
+    "homepage": "https://github.com/donereports/Done-Reports-IRC",
+    "dependencies": {"zenircbot-api": "~2",
+                     "cron": "*",
+                     "time": "*",
+                     "querystring": "*",
+                     "request": "*"},
+    "engines": {
+        "node": "*"
+    }
+}
