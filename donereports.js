@@ -147,7 +147,7 @@ function add_hook(repo_url, channel, cmd_channel) {
       zen.send_privmsg(cmd_channel, "There was an error saving the Github hook! " + data.error + ": " + data.error_description);
     } else if(data.repo) {
       if(data.added) {
-        zen.send_privmsg(cmd_channel, "Successfully added the hook for "+repo_url+"!");
+        zen.send_privmsg(cmd_channel, "Successfully added the hook for "+repo_url);
       } else {
         zen.send_privmsg(cmd_channel, "The hook already was set for "+repo_url);
       }
