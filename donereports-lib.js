@@ -343,8 +343,9 @@ ProjectStatus.prototype.load_config = function(callback) {
       } else {
         try {
           var data = JSON.parse(body);
-          if(data.groups) {
+          if(data.groups && data.commands) {
             self.config.groups = data.groups;
+            self.config.commands = data.commands;
             callback(data);
           } else {
             callback({

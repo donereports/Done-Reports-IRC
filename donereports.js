@@ -115,14 +115,57 @@ config.channels = function() {
   return channels;
 }
 
+config.allCommands = function() {
+  var commands = [];
+  for(var i in this.commands) {
+    commands.push(this.commands[i].command);
+    if(this.commands[i].aliases) {
+      for(var j in this.commands[i].aliases) {
+        commands.push(this.commands[i].aliases[j]);
+      }
+    }
+  }
+  return commands;
+}
+
+// Return a list of all command types (not including command aliases)
+// The list of types is global to the bot, so it's global to the network it's connecting to.
+config.allTypes = function() {
+  var types = [];
+  for(var i in this.commands) {
+    types.push(this.commands[i].command);
+  }
+  return types;
+}
+
+config.typeForCommand = function(command) {
+  for(var i in this.commands) {
+    if(this.commands[i].command == command ||
+      (this.commands[i].aliases && this.commands[i].aliases.indexOf(command) != -1)) {
+      return this.commands[i].command;
+    }
+  }
+  return null;
+}
+
 
 function now() {
   return parseInt( (new Date()).getTime() / 1000 );
 }
 
-function is_explicit_command(m) {
-  if(m.match(/^!(done|doing|todo|block|hero|undone|quote|share|shared|addrepo) .+/) || m.match(/^(done|doing|todo|block|hero|undone|share|shared|quote)! .+/)) {
-    return true;
+function parse_command(input) {
+  var commands = config.allCommands();
+  var regexp = "^(?:!(addrepo|undone|"+commands.join("|")+")|(addrepo|undone|"+commands.join("|")+")!) (.+)";
+  var match;
+  if(match=input.match(new RegExp(regexp))) {
+    var command = null;
+    if(match[1]) { command = match[1] }
+    if(match[2]) { command = match[2] }
+    return {
+      type: config.typeForCommand(command),
+      command: command,
+      text: match[3]
+    }
   } else {
     return false;
   }
@@ -176,9 +219,14 @@ function on_message_received(channel, message) {
     console.log("Username: "+username+" ("+msg.data.sender+")");
     console.log(message);
 
+    if(msg.data.message == "!commands") {
+      zen.send_privmsg(msg.data.channel, JSON.stringify(config.allCommands()));
+      return;
+    }
+
     // Reject users that are not in the config file
     if(username == false) {
-      if(is_explicit_command(msg.data.message)) {
+      if(parse_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, I couldn't find an account for "+msg.data.sender);
       }
       return;
@@ -231,7 +279,7 @@ function on_message_received(channel, message) {
     }
 
     if(group == false) {
-      if(msg.data.message && is_explicit_command(msg.data.message)) {
+      if(msg.data.message && parse_command(msg.data.message)) {
         zen.send_privmsg(msg.data.channel, "Sorry, there is no group for channel "+msg.data.channel);
       }
       return;
@@ -255,25 +303,17 @@ function on_message_received(channel, message) {
         return;
       }
 
-      if((match=msg.data.message.match(/^(done|doing|todo|hero|share|shared|quote)! (.+)/)) || (match=msg.data.message.match(/^!(done|doing|todo|hero|share|shared|quote) (.+)/))) {
-        console.log(username + " " + match[1] + ": " + match[2]);
+      var input;
+      if(input = parse_command(msg.data.message)) {
+        // Normal commands like !done did this thing
+        console.log(input);
+        done.type = input.type;
+        done.message = input.text;
 
-        done.message = match[2];
-        done.type = match[1];
-
-        if(done.type == "shared") {
-          done.type = "share";
-        }
-
-      } else if((match=msg.data.message.match(/^!block(?:ing|ed)? (.+)/)) || (match=msg.data.message.match(/^block(?:ing|ed)?! (.+)/))) {
-        console.log(username + " is blocked on: " + match[1]);
-
-        // Record their reply
-        done.message = match[1];
-        done.type = "blocking";
+        projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
 
       } else if(match=msg.data.message.match(/^loqi: (.+)/i)) {
-        console.log(username + " did something: " + match[1]);
+        console.log(username + " replied: " + match[1]);
 
         (function(done, line){
           // Check if we recently asked them a question, and if so, record a reply
@@ -284,40 +324,12 @@ function on_message_received(channel, message) {
             if(lastasked) {
               var threshold = 60 * 30; // Only recognize messages directed at Loqi: if Loqi has asked in the last half hour
 
-              if(lastasked.done && now() - parseInt(lastasked.done) < threshold) {
-                // Record a reply to "last"
-                done.message = line;
-                done.type = "done";
-
-              } else if(lastasked.doing && now() - parseInt(lastasked.doing) < threshold) {
-                // Record a reply to "future"
-                done.message = line;
-                done.type = "doing";
-
-              } else if(lastasked.future && now() - parseInt(lastasked.future) < threshold) {
-                // Record a reply to "future"
-                done.message = line;
-                done.type = "future";
-
-              } else if(lastasked.blocking && now() - parseInt(lastasked.blocking) < threshold) {
-                // Record a reply to "blocking"
-                done.message = line;
-                done.type = "blocking";
-
-              } else if(lastasked.share && now() - parseInt(lastasked.share) < threshold) {
-                // Record a reply to "share"
-                done.message = line;
-                done.type = "share";
-
-              } else if(lastasked.hero && now() - parseInt(lastasked.hero) < threshold) {
-                // Record a reply to "hero"
-                done.message = line;
-                done.type = "hero";
-
-              } else {
-                // done.message = match[1];
-                // done.type = "unknown";
-
+              for(var i in config.allTypes()) {
+                var type = config.allTypes()[i];
+                if(lastasked[type] && now() - parseInt(lastasked[type]) < threshold) {
+                  done.message = line;
+                  done.type = type;
+                }
               }
 
               if(done.message && done.type) {
@@ -342,10 +354,6 @@ function on_message_received(channel, message) {
         console.log(username + " undid something: " + match[1]);
 
         projects.remove_response(username, match[1], msg.data.sender, msg.data.channel);
-      }
-
-      if(done.message) {
-        projects.record_response(username, done.type, done.message, msg.data.sender, msg.data.channel);
       }
 
     }
