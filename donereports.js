@@ -441,7 +441,7 @@ cron_func = function(){
                       }
 
                       console.log("  asking " + nick + "(" + user.username + ") on " + group.channel + " now!");
-                      projects.ask_doing(group.channel, user.username, nick);
+                      projects.ask('doing', group.channel, user.username, nick);
                     }
                   }
                 });

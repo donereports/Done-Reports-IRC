@@ -17,135 +17,43 @@ ProjectStatus.prototype.rkey = function(key) {
   return "projects-"+key;
 }
 
-
-ProjectStatus.prototype.ask_done = function(channel, username, nick) {
+ProjectStatus.prototype.ask = function(type, channel, username, nick) {
   var self = this;
 
-  var questions = [
-    "What did you finish?",
-    "Did you finish anything?",
-  ];
+  var questions = self.config.commands[type].questions;
 
   self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("done", username);
-};
-
-ProjectStatus.prototype.ask_doing = function(channel, username, nick) {
-  var self = this;
-
-  var questions = [
-    "What have you been working on?",
-    "What are you working on?"
-  ];
-
-  self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("doing", username);
-};
-
-ProjectStatus.prototype.ask_future = function(channel, username, nick) {
-  var self = this;
-
-  var questions = [
-    "What are you going to do tomorrow?",
-    "What's your plan for tomorrow?",
-  ];
-
-  self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("future", username);
-};
-
-ProjectStatus.prototype.ask_blocking = function(channel, username, nick) {
-  var self = this;
-
-  var questions = [
-    "What are you stuck on? Or 'not stuck on anything' is fine too.",
-    "What is blocking you? 'Not blocked' is fine too.",
-    "Are you blocked on anything?",
-  ];
-
-  self.zen.send_privmsg(channel, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("blocking", username);
-};
-
-ProjectStatus.prototype.ask_hero = function(channel, username, nick) {
-  var self = this;
-
-  var questions = [
-    "Who is your hero and what did they do?",
-  ];
-
-  self.zen.send_privmsg(nick, nick+": "+questions[Math.floor(Math.random()*questions.length)]);
-  self.set_lastasked("hero", username);
+  self.set_lastasked(type, username);
 };
 
 ProjectStatus.prototype.send_confirmation = function(nick, channel, type) {
   var self = this;
 
-  var replies;
+  var replies = [];
 
-  // Set a few default replies. Specific types can override or add to this list.
-  replies = [
-    nick + ": Got it!",
-    nick + ": Nice.",
-    nick + ": nice",
-    nick + ": Ok! Got it!",
-    nick + ": ok!",
-    nick + ": awesome!",
-    nick + ": Awesome!"
-  ];
-
-  switch(type) {
-    case 'remove':
-      replies = [
-        nick + ": ok it's gone",
-        nick + ": erased!",
-        nick + ": ok I removed it",
-        nick + ": ok I got rid of it",
-        nick + ": gone!"
-      ];
-      break;
-    case 'blocking':
-      replies = [
-        nick + ": Sorry to hear that!",
-        nick + ": I will remember that",
-        nick + ": I hope it is resolved soon!",
-        nick + ": :(",
-        nick + ": Thanks for letting me know!"
-      ];
-      break;
-    case 'done':
-      replies.push(nick + ": Nicely done.");
-      replies.push(nick + ": Nicely done!");
-      replies.push(nick + ": nicely done!");
-      replies.push(nick + ": great!");
-      break;
-    case 'doing':
-      replies.push(nick + ": great, thanks!");
-      replies.push(nick + ": Great, thanks!");
-      replies.push(nick + ": Thanks!");
-      replies.push(nick + ": thanks!");
-      replies.push("Thanks, " + nick);
-      replies.push("Thanks, " + nick + "!");
-      break;
-    case 'quote':
-      replies.push(nick + ": Good one!");
-      replies.push(nick + ": good one!");
-      replies.push(nick + ": lol!");
-      replies.push(nick + ": haha, awesome");
-      replies.push(nick + ": haha, awesome!");
-      break;
-    case 'hero':
-      replies.push(nick + ": sweet!");
-      replies.push(nick + ": Sweet!");
-      replies.push(nick + ": yeah!!");
-      replies.push(nick + ": yeah!");
-      replies.push(nick + ": awesome!");
-    case 'share':
-      replies.push(nick + ": sweet!");
-      replies.push(nick + ": Sweet!");
-      replies.push(nick + ": yeah!");
-      replies.push(nick + ": awesome!");
-      break;
+  if(type == 'remove') {
+    replies = [
+      nick + ": ok it's gone",
+      nick + ": erased!",
+      nick + ": ok I removed it",
+      nick + ": ok I got rid of it",
+      nick + ": gone!"
+    ];
+  } else if(self.config.commands[type].responses) {
+    for(var i in self.config.commands[type].responses) {
+      replies.push(self.config.commands[type].responses[i].replace(/:nick/, nick));
+    }
+  } else {
+    // Some default replies
+    replies = [
+      nick + ": Got it!",
+      nick + ": Nice.",
+      nick + ": nice",
+      nick + ": Ok! Got it!",
+      nick + ": ok!",
+      nick + ": awesome!",
+      nick + ": Awesome!"
+    ];    
   }
 
   self.zen.send_privmsg(channel, replies[Math.floor(Math.random()*replies.length)]);
@@ -178,13 +86,7 @@ ProjectStatus.prototype.get_lastasked = function(type, username, callback) {
 ProjectStatus.prototype.set_lastasked = function(type, username) {
   var self = this;
 
-  if(type == "all") {
-    for(t in ["done","doing","future","blocking","hero"]) {
-      self.redis.set(self.rkey("lastasked-"+t+"-"+username), now(), function(){});
-    }
-  } else {
-    self.redis.set(self.rkey("lastasked-"+type+"-"+username), now(), function(){});
-  }
+  self.redis.set(self.rkey("lastasked-"+type+"-"+username), now(), function(){});
 }
 
 
