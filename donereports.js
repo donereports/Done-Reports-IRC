@@ -417,31 +417,54 @@ cron_func = function(){
             // Based on 
             //  1) current time (morning vs evening)
             //  2) when we last asked them (don't ask more than once every 3 hours)
-            //  3) when we last got a response from them (don't ask more than 4 hours after getting a reply)
-            //  4) when they are at their computer (last time they spoke in IRC)
+            //  3) when we last got a response from them (don't ask more than 4 hours after getting any sort of reply)
+            //  4) TODO: randomly stagger the prompts to avoid the "9am burst"
 
             // Only ask what you're working on during normal hours
-            if(currentTime.getHours() >= 9 && currentTime.getHours() <= 18) {
+            var askFrom, askTo;
+            if(group.prompt) {
+              askFrom = group.prompt.hr_from;
+              askTo = group.prompt.hr_to;
+            } else {
+              askFrom = 9;
+              askTo = 18;
+            }
+
+            if(currentTime.getHours() >= askFrom && currentTime.getHours() <= askTo) {
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
-              projects.get_lastasked("doing", user.username, function(err, lastasked){
+              var askType = 'doing';
+              if(group.prompt) {
+                askType = group.prompt.type;
+              }
+
+              projects.get_lastasked(askType, user.username, function(err, lastasked){
                 projects.get_lastreplied("any", user.username, function(err, lastreplied){
                   console.log("  "+group.channel+" Last asked " + user.username + " " + (now()-lastasked) + " seconds ago, last replied " 
                     + (now()-lastreplied) + " seconds ago");
 
+                  var shouldAsk = false;
+
                   if( lastreplied == null || (now() - lastreplied) > (60 * 60 * 2) ) {
                     if( lastasked == null || (now() - lastasked) > (60 * 60 * 3) ) {
+
                       if( lastasked == null && lastreplied == null ) {
                         // First time this user is in the system. Bail out some portion 
                         // of the time to stagger the first questions to everyone.
                         if( Math.random() < 0.3 ) {
                           console.log("  skipping 30% of the time");
-                          return;
+                          shouldAsk = false;
+                        } else {
+                          shouldAsk = true;
                         }
+                      } else {
+                        shouldAsk = true;
                       }
 
-                      console.log("  asking " + nick + "(" + user.username + ") on " + group.channel + " now!");
-                      projects.ask('doing', group.channel, user.username, nick);
+                      if(shouldAsk) {
+                        console.log("  asking " + nick + "(" + user.username + ") on " + group.channel + " now!");
+                        projects.ask(askType, group.channel, user.username, nick);
+                      }
                     }
                   }
                 });
