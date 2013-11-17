@@ -155,7 +155,7 @@ function now() {
 
 function parse_command(input) {
   var commands = config.allCommands();
-  var regexp = "^(?:!(addrepo|undone|"+commands.join("|")+")|(addrepo|undone|"+commands.join("|")+")!) (.+)";
+  var regexp = "^(?:!("+commands.join("|")+")|("+commands.join("|")+")!) (.+)";
   var match;
   if(match=input.match(new RegExp(regexp))) {
     var command = null;
@@ -190,7 +190,7 @@ function add_hook(repo_url, channel, cmd_channel) {
       zen.send_privmsg(cmd_channel, "There was an error saving the Github hook! " + data.error + ": " + data.error_description);
     } else if(data.repo) {
       if(data.added) {
-        zen.send_privmsg(cmd_channel, "Successfully added the hook for "+repo_url);
+        zen.send_privmsg(cmd_channel, "Successfully added "+repo_url+" to the channel");
       } else {
         zen.send_privmsg(cmd_channel, "The hook already was set for "+repo_url);
       }
