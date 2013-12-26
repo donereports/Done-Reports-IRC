@@ -494,22 +494,27 @@ cron_func = function(){
 
 function reload_config(callback) {
   projects.load_config(function(data){
-    console.log("Loaded Config");
-    if(typeof callback == "function") {
-      callback();
-    }
+    if(data && data.groups != null && data.commands != null) {
+      console.log("Loaded Config. "+data.groups.length+" groups");
 
-    // Join all the channels now
-    for(var i in config.groups) {
-      var channel = config.groups[i].channel;
-      console.log(channel);
-      redis.publish('out', JSON.stringify({
-        version: 1,
-        type: 'raw',
-        command: 'JOIN '+channel
-      }));
-    }
+      if(typeof callback == "function") {
+        callback();
+      }
 
+      // Join all the channels now
+      for(var i in config.groups) {
+        var channel = config.groups[i].channel;
+        console.log(channel);
+        redis.publish('out', JSON.stringify({
+          version: 1,
+          type: 'raw',
+          command: 'JOIN '+channel
+        }));
+      }
+    } else {
+      console.log("Error loading config");
+      console.log(data);      
+    }
   });
 }
 
