@@ -223,6 +223,61 @@ ProjectStatus.prototype.submit_report = function(channel, username, type, messag
   }
 }
 
+ProjectStatus.prototype.mydone = function(channel, username, callback) {
+  var self = this;
+
+  var group = self.config.group_for_channel(channel);
+  if(group == false) {
+    callback({
+      error: 'no_group',
+      error_description: 'Sorry, no group was found for the channel requested'
+    })
+    return false;
+  }
+
+  var user = self.config.user(username);
+
+  try {
+    request({
+      url: self.config.api_url+'/api/report/mydone',
+      method: 'post',
+      form: {
+        token: group.token,
+        username: username
+      }
+    }, function(error, response, body){
+      if(error) {
+        callback({
+          error: 'unknown',
+          error_description: 'An unknown error occurred'
+        });
+      } else if(response.statusCode != 200) {
+        callback({
+          error: 'unknown',
+          error_description: 'An unknown error occurred',
+          statusCode: response.statusCode
+        });
+      } else {
+        try {
+          callback(JSON.parse(body));
+        } catch(e) {
+          callback({
+            error: 'parse_error',
+            error_description: 'An error occurred parsing the API response'
+          });
+        }
+      }
+    });
+  } catch(e) {
+    console.log('[api] EXCEPTION!');
+    console.log(e);
+    callback({
+      error: 'exception',
+      error_description: 'An unknown error occurred'
+    });
+  }
+}
+
 ProjectStatus.prototype.load_config = function(callback) {
   var self = this;
 

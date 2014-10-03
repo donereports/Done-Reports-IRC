@@ -265,6 +265,21 @@ function on_message_received(channel, message) {
         }));
         return;
       }
+
+      if(match=msg.data.message.match(/^!mydone (#.+)$/)) {
+        console.log("Generating temporary token for channel: "+match[1]);
+        projects.mydone(match[1], username, function(data){
+          if(data.url) {
+            zen.send_privmsg(msg.data.sender, "You can view your in-progress entries here: " + data.url + " (this link will work for 5 minutes)");
+          } else if(data.error_description) {
+            zen.send_privmsg(msg.data.sender, data.error_description);
+          } else {
+            zen.send_privmsg(msg.data.sender, "An unknown error occurred!")
+          }
+        });
+        return;
+      }
+
       return;
     }
     //////////////////////////////////////////////////////////////////////////
@@ -300,6 +315,22 @@ function on_message_received(channel, message) {
         } else {
           zen.send_privmsg(msg.data.channel, "Wrong URL format, try something like https://github.com/username/repo");
         }
+        return;
+      }
+
+      if(msg.data.message == "!mydone") {
+        console.log("Generating temporary token");
+        projects.mydone(msg.data.channel, username, function(data){
+          if(data.url) {
+            zen.send_privmsg(msg.data.sender, "You can view your in-progress entries here: " + data.url + " (this link will work for 5 minutes)");
+            zen.send_privmsg(msg.data.channel, msg.data.sender+": I sent you a private message with a link to view your entries!");
+          } else if(data.error_description) {
+            zen.send_privmsg(msg.data.channel, data.error_description);
+          } else {
+            zen.send_privmsg(msg.data.channel, "An unknown error occurred!")
+          }
+          console.log(data);
+        });
         return;
       }
 
