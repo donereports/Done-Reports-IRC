@@ -310,7 +310,7 @@ function on_message_received(channel, message) {
 
       if(match=msg.data.message.match(/^!addrepo (https:?\/\/github\.com\/.+)/)) {
         console.log("Adding Github hook: ["+match[1]+"]");
-        if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/\.]+$/)) {
+        if(match[1].match(/^https?:\/\/github.com\/[^\/]+\/[^\/]+$/)) {
           add_hook(match[1], msg.data.channel, msg.data.channel);
         } else {
           zen.send_privmsg(msg.data.channel, "Wrong URL format, try something like https://github.com/username/repo");
@@ -461,7 +461,9 @@ cron_func = function(){
               askTo = 18;
             }
 
-            if(currentTime.getHours() >= askFrom && currentTime.getHours() <= askTo) {
+            weekday = currentTime.getDay() >= 1 && currentTime.getDay() <= 5;
+
+            if(weekday && currentTime.getHours() >= askFrom && currentTime.getHours() <= askTo) {
               console.log("Checking nick " + nick + " ("+user.username+") group " + group.channel);
 
               var askType = 'doing';
